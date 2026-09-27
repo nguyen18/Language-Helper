@@ -9,6 +9,7 @@
   --accent-soft: #e9e9f8;
   --on-accent: #ffffff;
   --blush: #f7dde2;
+  --cherry: #9b1b30;
   --danger: #c0364a;
   /* Light only for now, even when the OS is in dark mode. */
   color-scheme: light;

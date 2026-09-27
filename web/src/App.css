@@ -400,3 +400,79 @@ a.button.primary {
   font-weight: 600;
   color: var(--accent);
 }
+
+/* Cheatsheet */
+
+.cheat-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px 16px;
+  margin: 16px 0 0;
+  padding: 0;
+}
+
+.cheat-grid li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cheat-grid .rank {
+  min-width: 1.75rem;
+  text-align: right;
+}
+
+.cheat-word {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cheat-translation {
+  margin-left: auto;
+  color: var(--cherry);
+  font-weight: 500;
+  text-align: right;
+}
+
+.cheat-legend {
+  margin-top: 8px;
+}
+
+/* Collapsible cheatsheet lists */
+
+.cheat-list > summary {
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.cheat-list > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cheat-list > summary h2 {
+  margin-right: auto;
+}
+
+.cheat-list > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.chevron {
+  flex: none;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+.cheat-list:not([open]) .chevron {
+  transform: rotate(-90deg);
+}
+
+.cheat-list[open] > summary {
+  margin-bottom: 4px;
+}

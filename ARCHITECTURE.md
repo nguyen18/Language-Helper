@@ -8,7 +8,7 @@ A language-learning app that teaches a new language by building on how the perso
 
 The long-term plan (see `NOTES.md`) is a personal phrasebook, a feelings map, practice using the user's own stories, flashcards and a coverage score, all built from one shared **phrase entry** data structure.
 
-**What exists today is a proof of concept for one piece only, the Personal Word List Discoverer** (the owner's name for it, 2026-09-27; use this name when referring to the feature): the user has a casual chat with a scripted friend ("Mai", called "Sam" until 2026-09-26), and the app shows the user's top 100 most-used words. Since 2026-09-27 it lives on its own page, reached from a home page that shows Mai's study plan (a to-do list) and a site menu. Everything runs client-side: no backend, no accounts, no Claude calls yet. Replies never leave the device, except that dictation audio goes to the browser vendor's speech service (see "Dictation" below).
+**What exists today is a proof of concept for one piece only, the Personal Word List Discoverer** (the owner's name for it, 2026-09-27; use this name when referring to the feature): the user has a casual chat with a scripted friend ("Mai", called "Sam" until 2026-09-26), and the app shows the user's top 100 most-used words. Since 2026-09-27 it lives on its own page, reached from a home page that shows Mai's study plan (a to-do list) and a site menu. A **Cheatsheet** page (2026-09-27) shows reference word lists, starting with the 100 most common words. Everything runs client-side: no backend, no accounts, no Claude calls yet. Replies never leave the device, except that dictation audio goes to the browser vendor's speech service (see "Dictation" below).
 
 ## Current state (as of 2026-09-27)
 
@@ -18,8 +18,10 @@ The long-term plan (see `NOTES.md`) is a personal phrasebook, a feelings map, pr
   - `src/main.tsx` — template entry point, renders `<App />` in `StrictMode`.
   - `src/App.tsx` — the app shell: picks the page from the route and renders the site header with the menu (`SiteHeader`).
   - `src/pages/Home.tsx` — the home page: Mai's greeting, Mai's study plan (checkable to-dos) and a card linking to the Discoverer.
+  - `src/pages/Cheatsheet.tsx` — the Cheatsheet page: one card per list in `CHEATSHEET_LISTS`.
   - `src/pages/Discoverer.tsx` — the Personal Word List Discoverer: the chat screen (`Discoverer`) and the top-100 screen (`Results`).
   - `src/lib/useRoute.ts` — tiny hash router: the `Route` type, `ROUTE_HREF` and the `useRoute` hook.
+  - `src/lib/cheatsheet.ts` — the Cheatsheet's word lists (`CHEATSHEET_LISTS`).
   - `src/lib/studyPlan.ts` — Mai's study plan items (`STUDY_PLAN`).
   - `src/lib/conversation.ts` — Mai's script (`MAI_SCRIPT`) and `QUESTION_COUNT`.
   - `src/lib/wordCounts.ts` — splitting text into words, counting, the fallback word list, and display casing.
@@ -38,24 +40,32 @@ From `NOTES.md`, TypeScript everywhere: React + Vite web app, wrapped with **Cap
 ## Architecture of `web/`
 
 ### Pages and routing (`App.tsx`, `lib/useRoute.ts`)
-Two pages, chosen by the URL hash so refresh and the browser's Back button work without a router library or server config:
+Three pages, chosen by the URL hash so refresh and the browser's Back button work without a router library or server config:
 
 | Route | Hash | Page |
 |---|---|---|
 | `home` | `#/` (or no hash, or anything unknown) | `Home` |
 | `discover` | `#/discover` | `Discoverer` |
+| `cheatsheet` | `#/cheatsheet` | `Cheatsheet` |
 
-`useRoute` reads `window.location.hash` and listens for `hashchange`; navigation is plain `<a href={ROUTE_HREF[...]}>` links. To add a page: add it to `Route`, `ROUTE_HREF` and `readRoute`, then to the switch in `App` and to `MENU_ITEMS`. If routes start needing parameters or nesting, that's the point to switch to a real router.
+`useRoute` reads `window.location.hash` and listens for `hashchange`; navigation is plain `<a href={ROUTE_HREF[...]}>` links. To add a page: add it to `Route` and `ROUTE_HREF` (`readRoute` looks the hash up in `ROUTE_HREF`), then to the switch in `App` and to `MENU_ITEMS`. If routes start needing parameters or nesting, that's the point to switch to a real router.
 
-**Scroll:** `App` scrolls to the top when entering Home. It deliberately doesn't for the Discoverer, whose own effect scrolls to the latest message (child effects run before the parent's, so a parent scroll-to-top would override it).
+**Scroll:** `App` scrolls to the top when entering any page except the Discoverer. It deliberately doesn't for the Discoverer, whose own effect scrolls to the latest message (child effects run before the parent's, so a parent scroll-to-top would override it).
 
 **Site header** (`SiteHeader` in `App.tsx`): a "✦ Language Helper ✦" brand link to home (styled after the Try Studio wordmark) and a **☰ Menu** button that opens a dropdown `<nav>` with links to each page (current page marked `aria-current="page"`) plus a greyed-out "Coming soon" list (Personal phrasebook, Feelings map, Flashcards, from `NOTES.md`). The menu closes on Escape, a click outside, or clicking a link. `SiteHeader` is rendered with `key={route}` so it remounts closed on every page change, including Back; this replaced a `setOpen(false)` effect that oxlint's `set-state-in-effect` rule flagged.
 
 ### Home page (`pages/Home.tsx`, `lib/studyPlan.ts`)
 - Greeting from Mai ("Hi, I'm Mai!").
 - **Mai's study plan**: `STUDY_PLAN` items, each with a bold task, a one-line explanation and an optional link to a page. Checked ids are saved in `localStorage` under `language-helper:study-plan` (same try/catch pattern as the chat). A counter shows "N of 5 done"; done items are struck through. The wording is placeholder copy written 2026-09-27, the owner may rewrite it. **Keep ids stable** when editing text, or saved checkmarks are lost.
-- A blush-colored **Personal Word List Discoverer** card with an Open button.
+- A blush-colored **Personal Word List Discoverer** card and a plain **Cheatsheet** card, each with an Open button.
 - Checkboxes are real `<input type="checkbox">` with `<label htmlFor>`, so the task text is clickable and screen readers work.
+
+### Cheatsheet page (`pages/Cheatsheet.tsx`, `lib/cheatsheet.ts`)
+`CHEATSHEET_LISTS` is an array of `{ id, title, description, translationLang?, entries }`, where each entry is `{ word, translation? }`. The page renders one card per list, so **adding a list is a data-only change** in `cheatsheet.ts`. Each list is a native `<details open>` card (`.cheat-list`): clicking the title row (`<summary>`: title, word count, an SVG chevron that points right when collapsed) collapses it to just that row (owner's request 2026-09-27). Lists start expanded on every visit; the open/closed state isn't saved. Using `<details>` gives keyboard (Enter/Space) and screen reader support for free; the default disclosure triangle is hidden in CSS. Entries show as a numbered responsive grid (`.cheat-grid`, `auto-fill` columns of at least 190px), read left to right in rank order: rank, English word (indigo, bold), and the translation right-aligned in **vintage cherry red** (`--cherry: #9b1b30`, owner's request 2026-09-27). Translation spans get `lang={translationLang.code}` for screen readers, and a small legend ("English · Southern Vietnamese") explains the two colors. Words are React keys, so each list's words must be unique.
+
+**Translations (2026-09-27):** the top-100 list has casual **Southern Vietnamese** equivalents, written by the agent at the owner's request: Southern forms like *tui* (I), *hông* (not), *thiệt* (really), *ừa* (yeah), *cổ*/*ảnh* (she/him), *chờ* (wait), *giờ* (now), *cám ơn* (thanks). One common equivalent per word; English grammar words often have no direct match ("the" → "—", "is" → "là", "its" → "nó là"), so these are approximations and **haven't been reviewed by a native speaker**.
+
+The first list, **100 most common words**, is the owner's ranked list from `~/dev/top_100_words.txt` (outside the repo). **Keep its order and spellings exactly as given**: it uses texting spellings without apostrophes ("im", "dont", "thats", "tho", "gonna"). It's a different list from `FALLBACK_WORDS` in `wordCounts.ts`; the owner chose this one for the Cheatsheet on 2026-09-27.
 
 ### Discoverer screens and state (`pages/Discoverer.tsx`)
 Two views inside the page, switched by a `view` state (`'chat' | 'results'`). Both show a "Personal Word List Discoverer" eyebrow above the heading. The view isn't in the URL, so leaving the page and coming back always opens the chat (with the conversation intact).
@@ -117,7 +127,7 @@ The notes originally planned to rely on the phone keyboard's built-in dictation 
 - Dictated text is appended to the end of the draft, while filler chips insert at the cursor. That's inconsistent if the user moves the cursor before dictating.
 - Sent replies can't be edited or deleted; the only option is Start over.
 - No tests. The word counting in `wordCounts.ts` is the most test-worthy logic if tests are added.
-- Browser-tested by an agent (2026-09-27, Chrome): home page, menu, checking a to-do (persists after navigating), opening the Discoverer, and Back. Sending replies, dictation and the results screen haven't been click-tested by an agent.
+- Browser-tested by an agent (2026-09-27, Chrome): home page, menu, the Cheatsheet page, checking a to-do (persists after navigating), opening the Discoverer, and Back. Sending replies, dictation and the results screen haven't been click-tested by an agent.
 
 ## Considered but not built
 
@@ -139,7 +149,7 @@ The notes originally planned to rely on the phone keyboard's built-in dictation 
 - TypeScript everywhere, per the planned stack.
 - **Record product decisions in `NOTES.md`** (the owner asks for this) and code-level details here. When a decision is reversed, say so in both, rather than silently deleting the old one.
 - Every word counts in the top 100. Don't add filtering (nouns, stopwords) without the owner asking.
-- Keep `FALLBACK_WORDS` exactly as the owner supplied it.
+- Keep `FALLBACK_WORDS` and the Cheatsheet's top-100 list exactly as the owner supplied them.
 - Keep the POC client-side only until there's a concrete need for a backend.
 - Before finishing a change: `npm run build` and `npm run lint` in `web/`, both clean.
 - Test dictation changes in a real browser (Chrome and Safari at minimum); it can't be verified from builds alone.

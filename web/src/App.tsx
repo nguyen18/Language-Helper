@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Cheatsheet } from './pages/Cheatsheet'
 import { Discoverer } from './pages/Discoverer'
 import { Home } from './pages/Home'
 import { ROUTE_HREF, useRoute, type Route } from './lib/useRoute'
@@ -7,6 +8,7 @@ import './App.css'
 const MENU_ITEMS: { route: Route; label: string }[] = [
   { route: 'home', label: 'Home' },
   { route: 'discover', label: 'Personal Word List Discoverer' },
+  { route: 'cheatsheet', label: 'Cheatsheet' },
 ]
 
 // Planned features from NOTES.md, shown in the menu so the app's direction is visible.
@@ -15,16 +17,16 @@ const COMING_SOON = ['Personal phrasebook', 'Feelings map', 'Flashcards']
 function App() {
   const route = useRoute()
 
-  // Home starts at the top; the Discoverer scrolls itself to the latest message.
+  // Pages start at the top, except the Discoverer, which scrolls itself to the latest message.
   useEffect(() => {
-    if (route === 'home') window.scrollTo(0, 0)
+    if (route !== 'discover') window.scrollTo(0, 0)
   }, [route])
 
   return (
     <>
       {/* Keyed by route so the menu starts closed on every page, including after Back. */}
       <SiteHeader key={route} route={route} />
-      {route === 'discover' ? <Discoverer /> : <Home />}
+      {route === 'discover' ? <Discoverer /> : route === 'cheatsheet' ? <Cheatsheet /> : <Home />}
     </>
   )
 }

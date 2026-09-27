@@ -82,6 +82,14 @@ export function Home() {
           Open
         </a>
       </section>
+
+      <section className="card">
+        <h2>Cheatsheet</h2>
+        <p className="muted">Handy word lists to keep nearby, starting with the 100 most common words.</p>
+        <a className="button primary" href={ROUTE_HREF.cheatsheet}>
+          Open
+        </a>
+      </section>
     </main>
   )
 }
