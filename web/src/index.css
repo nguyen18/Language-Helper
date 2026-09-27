@@ -1,0 +1,28 @@
+:root {
+  /* Palette from the Try Studio screenshot: warm off-white, indigo ink, blush pink. */
+  --bg: #fdfbf7;
+  --surface: #ffffff;
+  --text: #23256e;
+  --muted: #6c6ea8;
+  --border: #dddcef;
+  --accent: #2e3192;
+  --accent-soft: #e9e9f8;
+  --on-accent: #ffffff;
+  --blush: #f7dde2;
+  --danger: #c0364a;
+  /* Light only for now, even when the OS is in dark mode. */
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
