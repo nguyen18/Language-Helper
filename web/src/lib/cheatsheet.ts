@@ -34,10 +34,20 @@ export type Meaning = {
   options: TranslationOption[]
 }
 
+// One part of a contraction ("I'll" = "I" + "will") with its own translation options.
+export type ContractionPart = {
+  word: string
+  // English-only helper words ("do" in "don't") have no translation of their own.
+  helper?: boolean
+  options: TranslationOption[]
+}
+
 export type CheatsheetEntry = {
   word: string
   // Most relevant first; the first is the default meaning.
   meanings: Meaning[]
+  // Contractions only: the words it's made of, whose translations combine into one ("tui sẽ").
+  parts?: ContractionPart[]
 }
 
 export type CheatsheetList = {
@@ -57,6 +67,7 @@ type Generated = {
   words: {
     word: string
     meanings: (Omit<Meaning, 'options'> & { translations: TranslationOption[] })[]
+    parts?: ContractionPart[]
   }[]
 }
 
@@ -76,9 +87,10 @@ export function loadTop100(): Promise<CheatsheetList> {
       title: '100 most common words you use',
       translationLang: { code: 'vi', label: 'Southern Vietnamese' },
       attribution: 'Meanings and translations from Wiktionary (CC BY-SA 4.0), via which-dialect.',
-      entries: data.words.map(({ word, meanings }) => ({
+      entries: data.words.map(({ word, meanings, parts }) => ({
         word,
         meanings: meanings.map(({ translations, ...meaning }) => ({ ...meaning, options: translations })),
+        ...(parts ? { parts } : {}),
       })),
     }))
     .catch((err: unknown) => {

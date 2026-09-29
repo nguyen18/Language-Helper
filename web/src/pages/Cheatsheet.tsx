@@ -1,7 +1,14 @@
 import { use, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Popover } from '../components/Popover'
-import { loadTop100, type CheatsheetEntry, type CheatsheetList, type Meaning } from '../lib/cheatsheet'
-import { meaningKey, optionKey, usePicks, type Picks } from '../lib/cheatsheetPicks'
+import {
+  loadTop100,
+  type CheatsheetEntry,
+  type CheatsheetList,
+  type ContractionPart,
+  type Meaning,
+  type TranslationOption,
+} from '../lib/cheatsheet'
+import { meaningKey, optionKey, partKey, usePicks, type Picks } from '../lib/cheatsheetPicks'
 import { toCheatsheetList, useCustomLists, type CustomEntry, type CustomList } from '../lib/customLists'
 
 export function Cheatsheet() {
@@ -133,6 +140,15 @@ function Row({ rank, entry, list, picks, setPick, onRemove }: RowProps) {
   const oKey = optionKey(list.id, entry.word, meaning?.id ?? '')
   const lang = list.translationLang?.code
 
+  // Contractions: each part's picked (or first) translation, joined in order ("tui" + "sẽ" → "tui sẽ").
+  // Helper parts ("do" in "don't") add nothing.
+  const partPicks = entry.parts?.map((part) =>
+    part.helper ? null : (part.options.find((o) => o.text === picks[partKey(list.id, part.word)]) ?? part.options[0] ?? null),
+  )
+  const combinedText = partPicks?.filter((o): o is TranslationOption => Boolean(o)).map((o) => o.text).join(' ')
+  const combined =
+    entry.parts && combinedText ? { text: combinedText, formula: entry.parts.map((p) => p.word).join(' + ') } : undefined
+
   return (
     <li>
       <span className="rank">{rank}</span>
@@ -151,6 +167,10 @@ function Row({ rank, entry, list, picks, setPick, onRemove }: RowProps) {
           langLabel={list.translationLang?.label}
           pickedText={picks[oKey]}
           onPick={(text, isDefault) => setPick(oKey, isDefault ? null : text)}
+          combined={combined}
+          parts={entry.parts}
+          partPicks={partPicks}
+          onPickPart={(part, text, isDefault) => setPick(partKey(list.id, part), isDefault ? null : text)}
         />
       ) : (
         // Not in the dictionary at all (e.g. "going to").
@@ -245,11 +265,33 @@ type TranslationCellProps = {
   // Text of the option the user starred for this meaning, if any.
   pickedText?: string
   onPick: (text: string, isDefault: boolean) => void
+  // Contractions only: the parts' combined translation (first option), the parts, and each part's pick.
+  combined?: { text: string; formula: string }
+  parts?: ContractionPart[]
+  partPicks?: (TranslationOption | null)[]
+  onPickPart?: (part: string, text: string, isDefault: boolean) => void
 }
 
 // The translation for the chosen meaning, with a box listing the other options and an example.
-function TranslationCell({ word, meaning, lang, langLabel, pickedText, onPick }: TranslationCellProps) {
-  const { options } = meaning
+function TranslationCell({
+  word,
+  meaning,
+  lang,
+  langLabel,
+  pickedText,
+  onPick,
+  combined,
+  parts,
+  partPicks,
+  onPickPart,
+}: TranslationCellProps) {
+  // A contraction's combined translation comes first; the word's own translations follow.
+  const options: TranslationOption[] = combined
+    ? [
+        { text: combined.text, gloss: `${combined.formula}, from its parts (star a part below to change it)` },
+        ...meaning.options.filter((o) => o.text !== combined.text),
+      ]
+    : meaning.options
   const found = options.findIndex((o) => o.text === pickedText)
   const pickedIndex = found >= 0 ? found : 0
   const picked = options[pickedIndex]
@@ -339,6 +381,55 @@ function TranslationCell({ word, meaning, lang, langLabel, pickedText, onPick }:
                 {picked.example.text}
               </p>
               {picked.example.translation && <p className="tip-en">{picked.example.translation}</p>}
+            </div>
+          )}
+          {parts && (
+            <div className="tip-parts">
+              <p className="tip-note-label">
+                {word} = {parts.map((p) => p.word).join(' + ')}
+              </p>
+              {parts.map((part, pi) =>
+                part.helper ? (
+                  <p key={part.word} className="part-helper">
+                    <span className="part-name">{part.word}</span> English helper word; no word needed
+                  </p>
+                ) : (
+                  <div key={part.word} role="group" aria-label={`Translations of “${part.word}”`}>
+                    <p className="part-name">{part.word}</p>
+                    {part.options.length ? (
+                      <ul>
+                        {part.options.map((option, i) => {
+                          const isPicked = partPicks?.[pi]?.text === option.text
+                          return (
+                            <li key={option.text}>
+                              <button
+                                type="button"
+                                className={isPicked ? 'tip-option picked' : 'tip-option'}
+                                aria-pressed={isPicked}
+                                onClick={() => onPickPart?.(part.word, option.text, i === 0)}
+                              >
+                                <span className="star" aria-hidden="true">
+                                  {isPicked ? '★' : '☆'}
+                                </span>
+                                <span className="tip-option-text" lang={lang}>
+                                  {option.text}
+                                </span>
+                                <span className="tip-option-usage">
+                                  {option.gloss}
+                                  {option.labels?.length ? <span className="label-chips"> {option.labels.join(', ')}</span> : null}
+                                </span>
+                                {i === 0 && <span className="default-tag">default</span>}
+                              </button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="part-helper">No translation found</p>
+                    )}
+                  </div>
+                ),
+              )}
             </div>
           )}
         </>

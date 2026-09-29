@@ -14,6 +14,12 @@ export const meaningKey = (listId: string, word: string) => `meaning|${listId}|$
 /** Which translation the user starred for one meaning of a word. */
 export const optionKey = (listId: string, word: string, meaningId: string) => `option|${listId}|${word}|${meaningId}`
 
+/**
+ * Which translation the user starred for a contraction part ("I" in "I'm"/"I'll"). Keyed by the part
+ * word, so one pick applies to every contraction with that part.
+ */
+export const partKey = (listId: string, part: string) => `part|${listId}|${part.toLowerCase()}`
+
 function loadPicks(): Picks {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
