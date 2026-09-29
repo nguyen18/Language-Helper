@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { Cheatsheet } from './pages/Cheatsheet'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Discoverer } from './pages/Discoverer'
 import { Home } from './pages/Home'
 import { ROUTE_HREF, useRoute, type Route } from './lib/useRoute'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import './App.css'
+
+// The Cheatsheet carries ~100 KB of dictionary data, so it loads only when opened.
+const Cheatsheet = lazy(() => import('./pages/Cheatsheet').then((m) => ({ default: m.Cheatsheet })))
 
 const MENU_ITEMS: { route: Route; label: string }[] = [
   { route: 'home', label: 'Home' },
@@ -26,7 +29,17 @@ function App() {
     <>
       {/* Keyed by route so the menu starts closed on every page, including after Back. */}
       <SiteHeader key={route} route={route} />
-      {route === 'discover' ? <Discoverer /> : route === 'cheatsheet' ? <Cheatsheet /> : <Home />}
+      {route === 'discover' ? (
+        <Discoverer />
+      ) : route === 'cheatsheet' ? (
+        <ErrorBoundary message="Couldn't load the cheatsheet. Check your connection and try again.">
+          <Suspense fallback={<main className="app"><p className="muted">Loading the cheatsheet…</p></main>}>
+            <Cheatsheet />
+          </Suspense>
+        </ErrorBoundary>
+      ) : (
+        <Home />
+      )}
     </>
   )
 }

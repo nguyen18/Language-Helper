@@ -23,7 +23,7 @@ textarea {
   padding: 12px;
   font: inherit;
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   resize: vertical;
@@ -406,13 +406,14 @@ a.button.primary {
 .cheat-grid {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 6px 16px;
   margin: 16px 0 0;
   padding: 0;
 }
 
-.cheat-grid li {
+.cheat-grid > li {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -420,7 +421,7 @@ a.button.primary {
   border-bottom: 1px solid var(--border);
 }
 
-.cheat-grid .rank {
+.cheat-grid > li > .rank {
   min-width: 1.75rem;
   text-align: right;
 }
@@ -431,10 +432,13 @@ a.button.primary {
 }
 
 .cheat-translation {
-  margin-left: auto;
-  color: var(--cherry);
+  color: var(--translation);
   font-weight: 500;
   text-align: right;
+}
+
+.cheat-trans-wrap {
+  margin-left: auto;
 }
 
 .cheat-legend {
@@ -475,4 +479,405 @@ a.button.primary {
 
 .cheat-list[open] > summary {
   margin-bottom: 4px;
+}
+
+/* Example sentence box on cheatsheet translations */
+
+button.tip-trigger {
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-radius: 2px;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, var(--translation) 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+button.tip-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Anchored to the list item; --shift is set in JS to keep it on screen. The padding is a
+   transparent bridge so the pointer can move from the word into the box without closing it. */
+.tip {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  width: min(320px, calc(100vw - 24px));
+  padding-top: 6px;
+  transform: translateX(var(--shift, 0px));
+}
+
+/* Opens below the word like a dropdown; flips above only when there's more room there (Popover.tsx). */
+.tip.above {
+  top: auto;
+  bottom: 100%;
+  padding-top: 0;
+  padding-bottom: 6px;
+}
+
+.tip-box {
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(35 37 110 / 0.16);
+  text-align: left;
+}
+
+.tip-box p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.tip-en {
+  color: var(--text);
+}
+
+.tip-box .tip-translated {
+  margin-top: 4px;
+  color: var(--translation);
+  font-weight: 500;
+}
+
+.tip-note {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* Sections in the box (options, example, note) are separated by a rule. The mobile-only
+   header counts as a section of its own, so the section right after it gets no rule. */
+.tip-box > * + *:not(.tip-head + *) {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.tip-box .tip-note-label {
+  margin-bottom: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* Translation options with stars */
+
+.more-tag {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.tip.pinned .tip-box {
+  border-color: var(--accent);
+}
+
+.tip-options ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+button.tip-option {
+  display: grid;
+  grid-template-columns: 1.25rem auto 1fr;
+  align-items: baseline;
+  column-gap: 8px;
+  /* Full-bleed hover background: wider than the box's text column by the padding on each side. */
+  width: calc(100% + 16px);
+  min-height: 36px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+}
+
+button.tip-option:hover {
+  background: var(--accent-soft);
+}
+
+button.tip-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.star {
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.tip-option.picked .star {
+  color: var(--translation);
+}
+
+.tip-option-text {
+  color: var(--translation);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tip-option-usage {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.default-tag {
+  grid-column: 3;
+  justify-self: start;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* Mobile header, close button and backdrop: hidden on larger screens. */
+
+.tip-head,
+.tip-backdrop {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  /* The box becomes a card centered on screen, never taller than the screen; long content
+     scrolls inside it. Keep the width in sync with MOBILE_QUERY in Cheatsheet.tsx. */
+  .tip,
+  .tip.above {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    z-index: 50;
+    width: min(380px, calc(100vw - 32px));
+    padding: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  .tip-box {
+    max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-top: 0;
+  }
+
+  .tip-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgb(35 37 110 / 0.35);
+    /* iOS Safari only sends click events to elements that look clickable. */
+    cursor: pointer;
+  }
+
+  /* Stays visible at the top while the card's content scrolls. */
+  .tip-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -14px 8px;
+    padding: 8px 8px 8px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  button.tip-close {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 1rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+  }
+}
+
+.cheat-hint {
+  margin-top: 2px;
+}
+
+/* Custom lists */
+
+button.add-list {
+  display: block;
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+}
+
+button.add-list:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.form-row input {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.form-row input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.empty-list {
+  margin-top: 12px;
+}
+
+.custom-controls {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.custom-controls .link {
+  margin: 12px 0 0;
+}
+
+button.link.danger-link {
+  color: var(--danger);
+}
+
+button.remove-word {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+}
+
+button.remove-word:hover,
+button.remove-word:focus-visible {
+  color: var(--danger);
+  background: var(--accent-soft);
+}
+
+/* Cheatsheet: English word meanings (which-dialect data) */
+
+/* The English word's box lines up with the start of the row; the translation's with the end. */
+.tip.align-start {
+  left: 0;
+  right: auto;
+}
+
+button.tip-trigger.word-trigger {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration-color: color-mix(in srgb, var(--text) 35%, transparent);
+}
+
+.pos-tag {
+  margin-left: 5px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.pos-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.meaning-gloss {
+  color: var(--text);
+}
+
+.meaning-example {
+  display: block;
+  margin-top: 2px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.label-chips {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.region-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tip-box .tip-meaning {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.attribution {
+  margin-top: 14px;
+  font-size: 0.75rem;
+}
+
+/* Long meaning lists ("going" has 25) scroll inside the box on larger screens too. */
+@media (min-width: 601px) {
+  .tip-box {
+    max-height: min(60vh, 460px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* On narrow screens every box is the centered card, including the English word's. */
+@media (max-width: 600px) {
+  .tip.align-start {
+    left: 50%;
+    right: auto;
+  }
+}
+
+/* A word with its part-of-speech tag, and a translation with its +N, each stay on one line. */
+button.tip-trigger.word-trigger,
+.cheat-trans-wrap > button.tip-trigger {
+  white-space: nowrap;
 }
