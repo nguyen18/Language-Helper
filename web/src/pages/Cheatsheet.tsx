@@ -644,13 +644,14 @@ type PronounTableViewProps = {
   lang?: string
 }
 
-// "Who are you talking to (or about)?" with the words for each relationship; tap a row to use it. Shows
-// the two columns that belong together (I/you, we/you plural, he·she/they), the looked-at one highlighted.
+// "Who are you talking to (or about)?" with the words for each relationship; tap a row to use it.
+// Talking-to tables show only the looked-at word's column ("I" for I/me/my, "you" for you/your, "we" for
+// we), per the owner's request; talking-about tables show he·she and they together.
 function PronounTableView({ pronoun, role, lang }: PronounTableViewProps) {
   const { table, speaker } = pronoun
   const row = role.relation === 'listener' ? pronoun.listener : pronoun.about
   const defaultId = role.relation === 'listener' ? table.defaultListener : table.defaultAbout
-  const columns = COLUMN_GROUPS[role.column]
+  const columns = role.relation === 'listener' ? [role.column] : COLUMN_GROUPS[role.column]
   // The man/woman choice only matters if a shown word depends on it.
   const speakerMatters = table.rows.some((r) => columns.some((c) => r.cells[c]?.some((cell) => cell.speaker)))
 

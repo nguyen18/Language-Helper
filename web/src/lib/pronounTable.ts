@@ -71,7 +71,8 @@ export function pronounRole(word: string): PronounRole | undefined {
   return ROLES[word.toLowerCase()]
 }
 
-// The table columns shown for a role: I/you together, we/you (plural) together, he·she/they together.
+// Columns that belong together. The Cheatsheet uses these pairs for talking-about tables (he·she/they);
+// talking-to tables show a single column (see PronounTableView).
 export const COLUMN_GROUPS: Record<PronounColumn, [PronounColumn, PronounColumn]> = {
   self: ['self', 'addressee'],
   addressee: ['self', 'addressee'],
