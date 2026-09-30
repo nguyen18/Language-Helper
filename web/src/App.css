@@ -1019,6 +1019,11 @@ button.pronoun-star {
   white-space: normal;
 }
 
+/* Each option in a cell gets its own line, so a cell with several options grows taller instead of wider. */
+.pronoun-word {
+  display: block;
+}
+
 .speaker-toggle {
   display: flex;
   align-items: center;

@@ -725,7 +725,6 @@ function PronounTableView({ pronoun, role, lang }: PronounTableViewProps) {
                       {cells.length
                         ? cells.map((cell, i) => (
                             <span key={cell.word + i} className="pronoun-word">
-                              {i > 0 && ' / '}
                               {cell.word}
                               {!speaker && cell.speaker && <span className="pronoun-tag">{cell.speaker === 'male' ? 'if you’re a man' : 'if you’re a woman'}</span>}
                               {cell.gender && c.startsWith('third') && <span className="pronoun-tag">{cell.gender === 'male' ? 'he' : 'she'}</span>}
