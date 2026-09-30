@@ -510,7 +510,7 @@ button.tip-trigger:focus-visible {
   z-index: 20;
   width: min(320px, calc(100vw - 24px));
   padding-top: 6px;
-  transform: translateX(var(--shift, 0px));
+  transform: translate(var(--shift, 0px), var(--vshift, 0px));
 }
 
 /* Opens below the word like a dropdown; flips above only when there's more room there (Popover.tsx). */
@@ -927,7 +927,8 @@ button.tip-trigger.word-trigger,
 
 .pronoun-table th,
 .pronoun-table td {
-  padding: 5px 4px;
+  padding: 3px 4px;
+  line-height: 1.3;
   text-align: left;
   vertical-align: top;
   border-top: 1px solid var(--border);
@@ -996,9 +997,10 @@ button.pronoun-star {
   color: var(--translation);
 }
 
-/* The table needs a little more room than a list of options. */
+/* The table needs more room than a list of options: wide enough that labels and words stay on one
+   line, which keeps all 12 rows short enough to fit on screen. */
 .tip:has(.pronoun-table) {
-  width: min(380px, calc(100vw - 24px));
+  width: min(460px, calc(100vw - 24px));
 }
 
 /* Pronoun table: word tags ("if you're a man", "she", "incl. you") and the man/woman toggle */
@@ -1029,4 +1031,27 @@ button.pronoun-star {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
+}
+
+/* A contraction with a pronoun ("I'm", "I'll"): on wide screens the pronoun table and the other parts'
+   options sit side by side, so the box stays short enough to fit on screen. */
+@media (min-width: 900px) {
+  .tip:has(.tip-parts-list.with-table) {
+    width: min(780px, calc(100vw - 24px));
+  }
+
+  .tip-parts-list.with-table {
+    display: grid;
+    grid-template-columns: minmax(0, 436px) minmax(0, 1fr);
+    column-gap: 20px;
+    align-items: start;
+  }
+}
+
+/* Pronoun tables (12 rows) are taller than a list of options: on larger screens they get the window's
+   height instead of the usual 460px cap, so every row fits without scrolling. */
+@media (min-width: 601px) {
+  .tip-box:has(.pronoun-table) {
+    max-height: calc(100vh - 24px);
+  }
 }

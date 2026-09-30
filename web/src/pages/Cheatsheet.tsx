@@ -358,11 +358,14 @@ function TranslationCell({
       </Popover>
     )
   }
-  // A contraction's combined translation comes first; the word's own translations follow.
+  // A contraction's combined translation comes first; the word's own translations follow. When a part
+  // is a pronoun from the "who are you talking to?" table ("I" in "I'm"), the word's own translations are
+  // just pronouns ("con", "anh"…) that the table already covers, so only the combined one is shown.
+  const pronounPart = Boolean(pronoun && parts?.some((p) => pronounRole(p.word)))
   const options: TranslationOption[] = combined
     ? [
-        { text: combined.text, gloss: `${combined.formula}, from its parts (star a part below to change it)` },
-        ...meaning.options.filter((o) => o.text !== combined.text),
+        { text: combined.text, gloss: `${combined.formula}, from its parts (change them below)` },
+        ...(pronounPart ? [] : meaning.options.filter((o) => o.text !== combined.text)),
       ]
     : meaning.options
   const found = options.findIndex((o) => o.text === pickedText)
@@ -461,53 +464,55 @@ function TranslationCell({
               <p className="tip-note-label">
                 {word} = {parts.map((p) => p.word).join(' + ')}
               </p>
-              {parts.map((part, pi) =>
-                pronoun && pronounRole(part.word) ? (
-                  <div key={part.word}>
-                    <p className="part-name">{part.word}</p>
-                    <PronounTableView pronoun={pronoun} role={pronounRole(part.word)!} lang={lang} />
-                  </div>
-                ) : part.helper ? (
-                  <p key={part.word} className="part-helper">
-                    <span className="part-name">{part.word}</span> English helper word; no word needed
-                  </p>
-                ) : (
-                  <div key={part.word} role="group" aria-label={`Translations of “${part.word}”`}>
-                    <p className="part-name">{part.word}</p>
-                    {part.options.length ? (
-                      <ul>
-                        {part.options.map((option, i) => {
-                          const isPicked = partPicks?.[pi]?.text === option.text
-                          return (
-                            <li key={option.text}>
-                              <button
-                                type="button"
-                                className={isPicked ? 'tip-option picked' : 'tip-option'}
-                                aria-pressed={isPicked}
-                                onClick={() => onPickPart?.(part.word, option.text, i === 0)}
-                              >
-                                <span className="star" aria-hidden="true">
-                                  {isPicked ? '★' : '☆'}
-                                </span>
-                                <span className="tip-option-text" lang={lang}>
-                                  {option.text}
-                                </span>
-                                <span className="tip-option-usage">
-                                  {option.gloss}
-                                  {option.labels?.length ? <span className="label-chips"> {option.labels.join(', ')}</span> : null}
-                                </span>
-                                {i === 0 && <span className="default-tag">default</span>}
-                              </button>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="part-helper">No translation found</p>
-                    )}
-                  </div>
-                ),
-              )}
+              <div className={pronounPart ? 'tip-parts-list with-table' : 'tip-parts-list'}>
+                {parts.map((part, pi) =>
+                  pronoun && pronounRole(part.word) ? (
+                    <div key={part.word}>
+                      <p className="part-name">{part.word}</p>
+                      <PronounTableView pronoun={pronoun} role={pronounRole(part.word)!} lang={lang} />
+                    </div>
+                  ) : part.helper ? (
+                    <p key={part.word} className="part-helper">
+                      <span className="part-name">{part.word}</span> English helper word; no word needed
+                    </p>
+                  ) : (
+                    <div key={part.word} role="group" aria-label={`Translations of “${part.word}”`}>
+                      <p className="part-name">{part.word}</p>
+                      {part.options.length ? (
+                        <ul>
+                          {part.options.map((option, i) => {
+                            const isPicked = partPicks?.[pi]?.text === option.text
+                            return (
+                              <li key={option.text}>
+                                <button
+                                  type="button"
+                                  className={isPicked ? 'tip-option picked' : 'tip-option'}
+                                  aria-pressed={isPicked}
+                                  onClick={() => onPickPart?.(part.word, option.text, i === 0)}
+                                >
+                                  <span className="star" aria-hidden="true">
+                                    {isPicked ? '★' : '☆'}
+                                  </span>
+                                  <span className="tip-option-text" lang={lang}>
+                                    {option.text}
+                                  </span>
+                                  <span className="tip-option-usage">
+                                    {option.gloss}
+                                    {option.labels?.length ? <span className="label-chips"> {option.labels.join(', ')}</span> : null}
+                                  </span>
+                                  {i === 0 && <span className="default-tag">default</span>}
+                                </button>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="part-helper">No translation found</p>
+                      )}
+                    </div>
+                  ),
+                )}
+              </div>
             </div>
           )}
         </>

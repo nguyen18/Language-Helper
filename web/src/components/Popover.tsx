@@ -76,11 +76,14 @@ export function Popover({
   }, [pinned])
 
   // Keep the box on screen: it opens below the trigger, nudged sideways to fit, and flips above when it
-  // doesn't fit below and there's more room above. On mobile it's a centered card sized by CSS instead.
+  // doesn't fit below and there's more room above. A box too tall for either side (a 12-row pronoun
+  // table next to a word mid-screen) is then moved up or down just enough to be fully visible. On mobile
+  // it's a centered card sized by CSS instead.
   useLayoutEffect(() => {
     const tip = tipRef.current
     if (!open || !tip) return
     tip.style.setProperty('--shift', '0px')
+    tip.style.setProperty('--vshift', '0px')
     tip.classList.remove('above')
     if (isMobile) return
     const rect = tip.getBoundingClientRect()
@@ -92,6 +95,11 @@ export function Popover({
     const roomBelow = window.innerHeight - (trigger?.bottom ?? rect.top)
     const roomAbove = trigger?.top ?? 0
     if (rect.bottom > window.innerHeight - GUTTER && roomAbove > roomBelow) tip.classList.add('above')
+    const placed = tip.getBoundingClientRect()
+    let vshift = 0
+    if (placed.bottom > window.innerHeight - GUTTER) vshift = window.innerHeight - GUTTER - placed.bottom
+    if (placed.top + vshift < GUTTER) vshift = GUTTER - placed.top
+    tip.style.setProperty('--vshift', `${vshift}px`)
   }, [open, contentKey, isMobile])
 
   // Focus moving between the trigger and buttons inside the box shouldn't close it.
