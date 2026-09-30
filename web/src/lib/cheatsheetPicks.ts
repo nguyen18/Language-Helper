@@ -20,6 +20,9 @@ export const optionKey = (listId: string, word: string, meaningId: string) => `o
  */
 export const partKey = (listId: string, part: string) => `part|${listId}|${part.toLowerCase()}`
 
+/** Which "who are you talking to?" row the user picked; shared by every pronoun word in a list. */
+export const pronounKey = (listId: string) => `pronoun|${listId}`
+
 function loadPicks(): Picks {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)

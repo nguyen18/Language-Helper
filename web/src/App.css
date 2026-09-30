@@ -906,3 +906,97 @@ button.tip-trigger.word-trigger,
 .part-helper .part-name {
   margin-right: 4px;
 }
+
+/* Pronoun words: "who are you talking to?" table (pronounTable.ts) */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.pronoun-table {
+  width: 100%;
+  margin-top: 4px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.pronoun-table th,
+.pronoun-table td {
+  padding: 5px 4px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--border);
+}
+
+.pronoun-table thead th {
+  border-top: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.pronoun-table tbody th {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pronoun-table tbody td {
+  color: var(--translation);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pronoun-table thead th.highlight {
+  color: var(--translation);
+}
+
+.pronoun-table tbody td:not(.highlight) {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.pronoun-table tbody tr {
+  cursor: pointer;
+}
+
+.pronoun-table tbody tr:hover,
+.pronoun-table tbody tr.picked {
+  background: var(--accent-soft);
+}
+
+.pronoun-table .default-tag {
+  display: block;
+}
+
+.pronoun-note {
+  display: block;
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+button.pronoun-star {
+  padding: 0 2px;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.pronoun-table tr.picked button.pronoun-star {
+  color: var(--translation);
+}
+
+/* The table needs a little more room than a list of options. */
+.tip:has(.pronoun-table) {
+  width: min(380px, calc(100vw - 24px));
+}

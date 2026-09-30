@@ -1,3 +1,5 @@
+import type { PronounTable } from './pronounTable'
+
 // Cheatsheet lists: English words, each with one or more meanings (part of speech + definition), and
 // for each meaning, translation options. The built-in list comes from which-dialect (see
 // scripts/build-cheatsheet.ts, which writes public/cheatsheet/top-100.json); custom lists come from
@@ -59,6 +61,9 @@ export type CheatsheetList = {
   translationLang?: { code: string; label: string }
   // Credit line for generated data (required by its CC BY-SA license when shown).
   attribution?: string
+  // "Who are you talking to?" table for the pronoun words (I, me, my, you, your, I'm, I'll). Will come
+  // from which-dialect via the generated data; until then the page uses DRAFT_PRONOUN_TABLE.
+  pronounTable?: PronounTable
   // Most common first; the page shows each word's rank.
   entries: CheatsheetEntry[]
 }
@@ -69,6 +74,7 @@ type Generated = {
     meanings: (Omit<Meaning, 'options'> & { translations: TranslationOption[] })[]
     parts?: ContractionPart[]
   }[]
+  pronounTable?: PronounTable
 }
 
 // The built-in list: the owner's top 100 words (topWords.ts), with meanings and Southern Vietnamese
@@ -92,6 +98,7 @@ export function loadTop100(): Promise<CheatsheetList> {
         meanings: meanings.map(({ translations, ...meaning }) => ({ ...meaning, options: translations })),
         ...(parts ? { parts } : {}),
       })),
+      ...(data.pronounTable ? { pronounTable: data.pronounTable } : {}),
     }))
     .catch((err: unknown) => {
       // Let a later visit retry.
