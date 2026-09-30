@@ -467,7 +467,7 @@ function TranslationCell({
               <div className={pronounPart ? 'tip-parts-list with-table' : 'tip-parts-list'}>
                 {parts.map((part, pi) =>
                   pronoun && pronounRole(part.word) ? (
-                    <div key={part.word}>
+                    <div key={part.word} className="part-pronoun">
                       <p className="part-name">{part.word}</p>
                       <PronounTableView pronoun={pronoun} role={pronounRole(part.word)!} lang={lang} />
                     </div>
@@ -679,67 +679,70 @@ function PronounTableView({ pronoun, role, lang }: PronounTableViewProps) {
           ))}
         </div>
       )}
-      <table className="pronoun-table">
-        <thead>
-          <tr>
-            <th scope="col">
-              <span className="sr-only">Use</span>
-            </th>
-            <th scope="col">{role.relation === 'about' ? 'Talking about' : 'Talking to'}</th>
-            {columns.map((c) => (
-              <th key={c} scope="col" className={c === role.column ? 'highlight' : undefined}>
-                {COLUMN_LABELS[c]}
+      {/* Scrolls on its own inside a contraction's box ("I'm"), so the other part stays in view. */}
+      <div className="pronoun-table-scroll">
+        <table className="pronoun-table">
+          <thead>
+            <tr>
+              <th scope="col">
+                <span className="sr-only">Use</span>
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {table.rows.map((r) => {
-            const isPicked = r.id === row.id
-            const pick = () => pronoun.onPickRow(role.relation, r.id)
-            return (
-              <tr key={r.id} className={isPicked ? 'picked' : undefined} onClick={pick}>
-                <td>
-                  <button
-                    type="button"
-                    className="pronoun-star"
-                    aria-pressed={isPicked}
-                    aria-label={`Use: ${r.who}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      pick()
-                    }}
-                  >
-                    {isPicked ? '★' : '☆'}
-                  </button>
-                </td>
-                <th scope="row">
-                  {r.who}
-                  {r.id === defaultId && <span className="default-tag">default</span>}
-                  {r.warning && <span className="pronoun-note">⚠ {r.warning}</span>}
+              <th scope="col">{role.relation === 'about' ? 'Talking about' : 'Talking to'}</th>
+              {columns.map((c) => (
+                <th key={c} scope="col" className={c === role.column ? 'highlight' : undefined}>
+                  {COLUMN_LABELS[c]}
                 </th>
-                {columns.map((c) => {
-                  const cells = cellChoices(r, c, speaker, c === role.column ? role.gender : undefined)
-                  return (
-                    <td key={c} className={c === role.column ? 'highlight' : undefined} lang={lang}>
-                      {cells.length
-                        ? cells.map((cell, i) => (
-                            <span key={cell.word + i} className="pronoun-word">
-                              {cell.word}
-                              {!speaker && cell.speaker && <span className="pronoun-tag">{cell.speaker === 'male' ? 'if you’re a man' : 'if you’re a woman'}</span>}
-                              {cell.gender && c.startsWith('third') && <span className="pronoun-tag">{cell.gender === 'male' ? 'he' : 'she'}</span>}
-                              {cell.inclusive !== undefined && <span className="pronoun-tag">{cell.inclusive ? 'incl. you' : 'not you'}</span>}
-                            </span>
-                          ))
-                        : '—'}
-                    </td>
-                  )
-                })}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((r) => {
+              const isPicked = r.id === row.id
+              const pick = () => pronoun.onPickRow(role.relation, r.id)
+              return (
+                <tr key={r.id} className={isPicked ? 'picked' : undefined} onClick={pick}>
+                  <td>
+                    <button
+                      type="button"
+                      className="pronoun-star"
+                      aria-pressed={isPicked}
+                      aria-label={`Use: ${r.who}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        pick()
+                      }}
+                    >
+                      {isPicked ? '★' : '☆'}
+                    </button>
+                  </td>
+                  <th scope="row">
+                    {r.who}
+                    {r.id === defaultId && <span className="default-tag">default</span>}
+                    {r.warning && <span className="pronoun-note">⚠ {r.warning}</span>}
+                  </th>
+                  {columns.map((c) => {
+                    const cells = cellChoices(r, c, speaker, c === role.column ? role.gender : undefined)
+                    return (
+                      <td key={c} className={c === role.column ? 'highlight' : undefined} lang={lang}>
+                        {cells.length
+                          ? cells.map((cell, i) => (
+                              <span key={cell.word + i} className="pronoun-word">
+                                {cell.word}
+                                {!speaker && cell.speaker && <span className="pronoun-tag">{cell.speaker === 'male' ? 'if you’re a man' : 'if you’re a woman'}</span>}
+                                {cell.gender && c.startsWith('third') && <span className="pronoun-tag">{cell.gender === 'male' ? 'he' : 'she'}</span>}
+                                {cell.inclusive !== undefined && <span className="pronoun-tag">{cell.inclusive ? 'incl. you' : 'not you'}</span>}
+                              </span>
+                            ))
+                          : '—'}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

@@ -1038,19 +1038,48 @@ button.pronoun-star {
   color: var(--on-accent);
 }
 
-/* A contraction with a pronoun ("I'm", "I'll"): on wide screens the pronoun table and the other parts'
-   options sit side by side, so the box stays short enough to fit on screen. */
-@media (min-width: 900px) {
-  .tip:has(.tip-parts-list.with-table) {
-    width: min(780px, calc(100vw - 24px));
-  }
+/* A contraction with a pronoun ("I'm", "I'll"): the parts stack (I, then am), the box is capped at the
+   screen's height, and the pronoun table scrolls inside it so everything else stays in view. The box and
+   each wrapper down to the table are flex columns where only the table's wrapper shrinks. */
+.tip-box:has(.tip-parts-list.with-table),
+.tip-parts:has(.tip-parts-list.with-table),
+.tip-parts-list.with-table,
+.part-pronoun,
+.part-pronoun .tip-pronouns {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
-  .tip-parts-list.with-table {
-    display: grid;
-    grid-template-columns: minmax(0, 436px) minmax(0, 1fr);
-    column-gap: 20px;
-    align-items: start;
-  }
+.tip-box:has(.tip-parts-list.with-table) > *,
+.tip-parts:has(.tip-parts-list.with-table) > *,
+.tip-parts-list.with-table > *,
+.part-pronoun > *,
+.part-pronoun .tip-pronouns > * {
+  flex-shrink: 0;
+}
+
+.tip-box:has(.tip-parts-list.with-table) > .tip-parts,
+.tip-parts:has(.tip-parts-list.with-table) > .tip-parts-list,
+.tip-parts-list.with-table > .part-pronoun,
+.part-pronoun > .tip-pronouns,
+.part-pronoun .pronoun-table-scroll {
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.part-pronoun .pronoun-table-scroll {
+  min-height: 140px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The column names stay visible while the table scrolls. */
+.part-pronoun .pronoun-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
 }
 
 /* Pronoun tables (12 rows) are taller than a list of options: on larger screens they get the window's
