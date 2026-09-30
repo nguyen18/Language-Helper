@@ -20,8 +20,12 @@ export const optionKey = (listId: string, word: string, meaningId: string) => `o
  */
 export const partKey = (listId: string, part: string) => `part|${listId}|${part.toLowerCase()}`
 
-/** Which "who are you talking to?" row the user picked; shared by every pronoun word in a list. */
-export const pronounKey = (listId: string) => `pronoun|${listId}`
+/**
+ * Pronoun table picks, shared by every pronoun word in a list: who you're talking to ('listener', for
+ * I/you/we), who you're talking about ('about', for he/she/they), and whether you're a man or a woman
+ * ('speaker', for words like "anh"/"chị" toward someone younger).
+ */
+export const pronounKey = (listId: string, kind: 'listener' | 'about' | 'speaker') => `pronoun-${kind}|${listId}`
 
 function loadPicks(): Picks {
   try {

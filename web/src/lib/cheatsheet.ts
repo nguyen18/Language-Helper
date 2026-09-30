@@ -61,8 +61,8 @@ export type CheatsheetList = {
   translationLang?: { code: string; label: string }
   // Credit line for generated data (required by its CC BY-SA license when shown).
   attribution?: string
-  // "Who are you talking to?" table for the pronoun words (I, me, my, you, your, I'm, I'll). Will come
-  // from which-dialect via the generated data; until then the page uses DRAFT_PRONOUN_TABLE.
+  // "Who are you talking to?" table for the pronoun words (I, me, my, you, your, we, she, her, him, they,
+  // them, and contractions with "I"), from which-dialect via the generated data.
   pronounTable?: PronounTable
   // Most common first; the page shows each word's rank.
   entries: CheatsheetEntry[]

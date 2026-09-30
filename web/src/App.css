@@ -1000,3 +1000,33 @@ button.pronoun-star {
 .tip:has(.pronoun-table) {
   width: min(380px, calc(100vw - 24px));
 }
+
+/* Pronoun table: word tags ("if you're a man", "she", "incl. you") and the man/woman toggle */
+
+.pronoun-tag {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 0.68rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--muted);
+  opacity: 1;
+}
+
+.pronoun-table td {
+  white-space: normal;
+}
+
+.speaker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 2px;
+  font-size: 0.8rem;
+}
+
+.speaker-toggle button.chip[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}

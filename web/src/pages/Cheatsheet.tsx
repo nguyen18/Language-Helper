@@ -10,12 +10,15 @@ import {
 } from '../lib/cheatsheet'
 import { meaningKey, optionKey, partKey, pronounKey, usePicks, type Picks } from '../lib/cheatsheetPicks'
 import {
-  DRAFT_PRONOUN_TABLE,
+  cellChoices,
+  COLUMN_GROUPS,
+  COLUMN_LABELS,
   pronounRole,
-  pronounText,
+  pronounTextOrDefault,
   type PronounRole,
   type PronounRow,
   type PronounTable,
+  type Speaker,
 } from '../lib/pronounTable'
 import { toCheatsheetList, useCustomLists, type CustomEntry, type CustomList } from '../lib/customLists'
 
@@ -79,23 +82,37 @@ type ListCardProps = {
 }
 
 // One word list as a collapsible card. Built-in and custom lists share it.
-// The pronoun table for a list: from the generated data when it has one, else the draft (built-in list only).
-function pronounTableFor(list: CheatsheetList): PronounTable | undefined {
-  return list.pronounTable ?? (list.id === 'top-100' ? DRAFT_PRONOUN_TABLE : undefined)
+// What rows need to show pronoun words from the table: the picked rows for who you're talking to and
+// about, the speaker's gender if set, and how to change them.
+type PronounProps = {
+  table: PronounTable
+  listener: PronounRow
+  about: PronounRow
+  speaker?: Speaker
+  onPickRow: (relation: 'listener' | 'about', rowId: string) => void
+  onPickSpeaker: (speaker: Speaker | null) => void
 }
-
-// What Row needs to show pronoun words from the table.
-type PronounProps = { table: PronounTable; row: PronounRow; onPick: (rowId: string) => void }
 
 function ListCard({ list, picks, setPick, onRemoveEntry, children }: ListCardProps) {
   const hasMeanings = list.entries.some((e) => e.meanings.length > 1 || e.meanings[0]?.pos)
-  const table = pronounTableFor(list)
-  const pronoun: PronounProps | undefined = table && {
-    table,
-    row: table.rows.find((r) => r.id === picks[pronounKey(list.id)]) ?? table.rows.find((r) => r.id === table.defaultId) ?? table.rows[0],
-    // Picking the default row clears the saved pick.
-    onPick: (rowId) => setPick(pronounKey(list.id), rowId === table.defaultId ? null : rowId),
+  const table = list.pronounTable
+  const rowFor = (relation: 'listener' | 'about') => {
+    const fallback = relation === 'listener' ? table!.defaultListener : table!.defaultAbout
+    return table!.rows.find((r) => r.id === picks[pronounKey(list.id, relation)]) ?? table!.rows.find((r) => r.id === fallback) ?? table!.rows[0]
   }
+  const savedSpeaker = picks[pronounKey(list.id, 'speaker')]
+  const pronoun: PronounProps | undefined = table?.rows.length
+    ? {
+        table,
+        listener: rowFor('listener'),
+        about: rowFor('about'),
+        speaker: savedSpeaker === 'male' || savedSpeaker === 'female' ? savedSpeaker : undefined,
+        // Picking the default row clears the saved pick.
+        onPickRow: (relation, rowId) =>
+          setPick(pronounKey(list.id, relation), rowId === (relation === 'listener' ? table.defaultListener : table.defaultAbout) ? null : rowId),
+        onPickSpeaker: (speaker) => setPick(pronounKey(list.id, 'speaker'), speaker),
+      }
+    : undefined
   return (
     // Native <details>: collapsible with keyboard and screen reader support; the summary (title) stays visible.
     <details className="card cheat-list" open>
@@ -167,10 +184,14 @@ function Row({ rank, entry, list, picks, setPick, pronoun, onRemove }: RowProps)
 
   // Contractions: each part's picked (or first) translation, joined in order ("tui" + "sẽ" → "tui sẽ").
   // Helper parts ("do" in "don't") add nothing.
-  // The part "I" follows the pronoun table's row when there is one ("I'll" + friend → "tui sẽ").
+  // Pronoun parts ("I" in "I'll") follow the pronoun table ("I'll" + friend → "mình sẽ").
   const partPicks = entry.parts?.map((part) => {
     if (part.helper) return null
-    if (pronoun && pronounRole(part.word) === 'i') return { text: pronounText('i', pronoun.row) }
+    const partRole = pronounRole(part.word)
+    if (pronoun && partRole) {
+      const text = pronounTextOrDefault(partRole, partRole.relation === 'listener' ? pronoun.listener : pronoun.about, pronoun.table, pronoun.speaker)
+      if (text) return { text }
+    }
     return part.options.find((o) => o.text === picks[partKey(list.id, part.word)]) ?? part.options[0] ?? null
   })
   const role = pronounRole(entry.word)
@@ -200,7 +221,7 @@ function Row({ rank, entry, list, picks, setPick, pronoun, onRemove }: RowProps)
           parts={entry.parts}
           partPicks={partPicks}
           onPickPart={(part, text, isDefault) => setPick(partKey(list.id, part), isDefault ? null : text)}
-          pronoun={pronoun && (role || entry.parts?.some((p) => pronounRole(p.word) === 'i')) ? { ...pronoun, role } : undefined}
+          pronoun={pronoun && (role || entry.parts?.some((p) => pronounRole(p.word))) ? { ...pronoun, role } : undefined}
         />
       ) : (
         // Not in the dictionary at all (e.g. "going to").
@@ -300,8 +321,8 @@ type TranslationCellProps = {
   parts?: ContractionPart[]
   partPicks?: (TranslationOption | null)[]
   onPickPart?: (part: string, text: string, isDefault: boolean) => void
-  // Pronoun words: the "who are you talking to?" table. `role` is set for I/me/my/you/your; contractions
-  // with "I" leave it unset and use the table for their "I" part.
+  // Pronoun words: the "who are you talking to?" table. `role` is set for pronoun words; contractions
+  // leave it unset and use the table for their pronoun part ("I" in "I'll").
   pronoun?: PronounProps & { role?: PronounRole }
 }
 
@@ -321,18 +342,19 @@ function TranslationCell({
 }: TranslationCellProps) {
   // Pronoun words show the table's word for the picked row, and the table instead of a ranked list.
   if (pronoun?.role) {
-    const text = pronounText(pronoun.role, pronoun.row)
+    const row = pronoun.role.relation === 'listener' ? pronoun.listener : pronoun.about
+    const text = pronounTextOrDefault(pronoun.role, row, pronoun.table, pronoun.speaker) ?? meaning.options[0]?.text ?? '—'
     return (
       <Popover
         title={word}
         wrapClassName="cheat-trans-wrap"
         triggerClassName="cheat-translation"
         lang={lang}
-        contentKey={`${meaning.id}|${pronoun.row.id}`}
-        triggerLabel={`${text}, depends on who you're talking to`}
+        contentKey={`${meaning.id}|${row.id}|${pronoun.speaker ?? ''}`}
+        triggerLabel={`${text}, depends on who you're talking ${pronoun.role.relation === 'about' ? 'about' : 'to'}`}
         trigger={text}
       >
-        <PronounTableView table={pronoun.table} row={pronoun.row} role={pronoun.role} onPick={pronoun.onPick} lang={lang} />
+        <PronounTableView pronoun={pronoun} role={pronoun.role} lang={lang} />
       </Popover>
     )
   }
@@ -440,10 +462,10 @@ function TranslationCell({
                 {word} = {parts.map((p) => p.word).join(' + ')}
               </p>
               {parts.map((part, pi) =>
-                pronoun && pronounRole(part.word) === 'i' ? (
+                pronoun && pronounRole(part.word) ? (
                   <div key={part.word}>
                     <p className="part-name">{part.word}</p>
-                    <PronounTableView table={pronoun.table} row={pronoun.row} role="i" onPick={pronoun.onPick} lang={lang} />
+                    <PronounTableView pronoun={pronoun} role={pronounRole(part.word)!} lang={lang} />
                   </div>
                 ) : part.helper ? (
                   <p key={part.word} className="part-helper">
@@ -617,40 +639,60 @@ function CustomListControls({ list, onAdd, onDelete }: CustomListControlsProps) 
 }
 
 type PronounTableViewProps = {
-  table: PronounTable
-  row: PronounRow
+  pronoun: PronounProps
   role: PronounRole
-  onPick: (rowId: string) => void
   lang?: string
 }
 
-// "Who are you talking to?" with the I/you pair for each relationship; tap a row to use it. The
-// column for the word being looked at ("I" or "you") is highlighted.
-function PronounTableView({ table, row, role, onPick, lang }: PronounTableViewProps) {
-  const iColumn = role === 'i' || role === 'my'
+// "Who are you talking to (or about)?" with the words for each relationship; tap a row to use it. Shows
+// the two columns that belong together (I/you, we/you plural, he·she/they), the looked-at one highlighted.
+function PronounTableView({ pronoun, role, lang }: PronounTableViewProps) {
+  const { table, speaker } = pronoun
+  const row = role.relation === 'listener' ? pronoun.listener : pronoun.about
+  const defaultId = role.relation === 'listener' ? table.defaultListener : table.defaultAbout
+  const columns = COLUMN_GROUPS[role.column]
+  // The man/woman choice only matters if a shown word depends on it.
+  const speakerMatters = table.rows.some((r) => columns.some((c) => r.cells[c]?.some((cell) => cell.speaker)))
+
   return (
     <div className="tip-pronouns">
-      <p className="tip-note-label">Who are you talking to?</p>
+      <p className="tip-note-label">{role.relation === 'about' ? 'Who are you talking about?' : 'Who are you talking to?'}</p>
+      {speakerMatters && (
+        <div className="speaker-toggle" role="group" aria-label="You are">
+          <span className="muted">I’m</span>
+          {(['male', 'female'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              className="chip"
+              aria-pressed={speaker === s}
+              onClick={() => pronoun.onPickSpeaker(speaker === s ? null : s)}
+            >
+              {s === 'male' ? 'a man' : 'a woman'}
+            </button>
+          ))}
+        </div>
+      )}
       <table className="pronoun-table">
         <thead>
           <tr>
             <th scope="col">
               <span className="sr-only">Use</span>
             </th>
-            <th scope="col">Talking to</th>
-            <th scope="col" className={iColumn ? 'highlight' : undefined}>
-              “I”
-            </th>
-            <th scope="col" className={iColumn ? undefined : 'highlight'}>
-              “you”
-            </th>
+            <th scope="col">{role.relation === 'about' ? 'Talking about' : 'Talking to'}</th>
+            {columns.map((c) => (
+              <th key={c} scope="col" className={c === role.column ? 'highlight' : undefined}>
+                {COLUMN_LABELS[c]}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {table.rows.map((r) => {
             const isPicked = r.id === row.id
+            const pick = () => pronoun.onPickRow(role.relation, r.id)
             return (
-              <tr key={r.id} className={isPicked ? 'picked' : undefined} onClick={() => onPick(r.id)}>
+              <tr key={r.id} className={isPicked ? 'picked' : undefined} onClick={pick}>
                 <td>
                   <button
                     type="button"
@@ -659,7 +701,7 @@ function PronounTableView({ table, row, role, onPick, lang }: PronounTableViewPr
                     aria-label={`Use: ${r.who}`}
                     onClick={(e) => {
                       e.stopPropagation()
-                      onPick(r.id)
+                      pick()
                     }}
                   >
                     {isPicked ? '★' : '☆'}
@@ -667,15 +709,27 @@ function PronounTableView({ table, row, role, onPick, lang }: PronounTableViewPr
                 </td>
                 <th scope="row">
                   {r.who}
-                  {r.id === table.defaultId && <span className="default-tag">default</span>}
-                  {r.note && <span className="pronoun-note">{r.note}</span>}
+                  {r.id === defaultId && <span className="default-tag">default</span>}
+                  {r.warning && <span className="pronoun-note">⚠ {r.warning}</span>}
                 </th>
-                <td className={iColumn ? 'highlight' : undefined} lang={lang}>
-                  {r.i.join(' / ')}
-                </td>
-                <td className={iColumn ? undefined : 'highlight'} lang={lang}>
-                  {r.you.join(' / ')}
-                </td>
+                {columns.map((c) => {
+                  const cells = cellChoices(r, c, speaker, c === role.column ? role.gender : undefined)
+                  return (
+                    <td key={c} className={c === role.column ? 'highlight' : undefined} lang={lang}>
+                      {cells.length
+                        ? cells.map((cell, i) => (
+                            <span key={cell.word + i} className="pronoun-word">
+                              {i > 0 && ' / '}
+                              {cell.word}
+                              {!speaker && cell.speaker && <span className="pronoun-tag">{cell.speaker === 'male' ? 'if you’re a man' : 'if you’re a woman'}</span>}
+                              {cell.gender && c.startsWith('third') && <span className="pronoun-tag">{cell.gender === 'male' ? 'he' : 'she'}</span>}
+                              {cell.inclusive !== undefined && <span className="pronoun-tag">{cell.inclusive ? 'incl. you' : 'not you'}</span>}
+                            </span>
+                          ))
+                        : '—'}
+                    </td>
+                  )
+                })}
               </tr>
             )
           })}

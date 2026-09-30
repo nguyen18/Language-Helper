@@ -7,17 +7,31 @@
 // page when it opens, so the ~1 MB of data isn't in the JavaScript bundle). Run it again after
 // changing the word list or updating which-dialect's data.
 //
-// which-dialect isn't on npm yet, so its data is read from a local checkout: by default
-// ../../which-dialect/packages/<lang>/data (override with WHICH_DIALECT_TOOL_DATA=<packages dir>).
+// which-dialect is on npm; its data loads from the jsDelivr CDN (which-dialect-<lang>). To use a local
+// checkout instead (offline, or unpublished data), set WHICH_DIALECT_DATA=<path to which-dialect/packages>.
+//
+// It also writes the Vietnamese pronoun table (dictionary.pronouns(), Southern) for the "who are you
+// talking to?" boxes on the pronoun words.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createTranslator, displayGloss, posName, type Translator } from 'which-dialect'
+import {
+  createDictionary,
+  createTranslator,
+  displayGloss,
+  posName,
+  PRONOUN_PERSONS,
+  type LoadJson,
+  type PronounChoice,
+  type Translator,
+} from 'which-dialect'
 import { TOP_100_WORDS } from '../src/lib/topWords.ts'
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..')
-const DATA = resolve(process.env.WHICH_DIALECT_TOOL_DATA ?? join(WEB, '..', '..', 'which-dialect', 'packages'))
+const LOCAL_DATA = process.env.WHICH_DIALECT_DATA ? resolve(process.env.WHICH_DIALECT_DATA) : null
+const localLoad = (lang: string): LoadJson | undefined =>
+  LOCAL_DATA ? async (path) => JSON.parse(await readFile(join(LOCAL_DATA, lang, 'data', path), 'utf8')) : undefined
 const OUT = join(WEB, 'public', 'cheatsheet', 'top-100.json')
 
 const TO_REGION = 'Southern'
@@ -99,9 +113,8 @@ function unique(ids: string[]): string[] {
 }
 
 async function main() {
-  const tr = createTranslator({
-    load: (lang) => async (path) => JSON.parse(await readFile(join(DATA, lang, 'data', path), 'utf8')),
-  })
+  const tr = createTranslator({ load: localLoad })
+  console.log(LOCAL_DATA ? `Using local data from ${LOCAL_DATA}` : 'Using which-dialect data from the jsDelivr CDN')
 
   const words = []
   for (const word of TOP_100_WORDS) {
@@ -134,12 +147,39 @@ async function main() {
     if (parts) console.log(`           parts: ${parts.map((p) => `${p.word} → ${'helper' in p ? '(helper)' : p.options.map((o) => o.text).join('/') || '—'}`).join(' + ')}`)
   }
 
+  // The "who are you talking to?" table: one row per relationship, with the words for I, you, he/she,
+  // we, plural you and they. Only what the page shows is kept.
+  const vi = createDictionary({ lang: 'vi', load: localLoad('vi') })
+  const cell = (c: PronounChoice) => ({
+    word: c.word,
+    ...(c.speaker ? { speaker: c.speaker } : {}),
+    ...(c.gender ? { gender: c.gender } : {}),
+    ...(c.inclusive !== undefined ? { inclusive: c.inclusive } : {}),
+    ...(c.labels.length ? { labels: c.labels } : {}),
+  })
+  const rows = await vi.pronouns({ region: TO_REGION })
+  const pronounTable = {
+    source: 'which-dialect',
+    // Language Helper is about casual chat, so a friend your age leads; the package's neutral default
+    // ("general": tôi / bạn) is the default for who you're talking about ("he"/"she"/"they").
+    defaultListener: rows.some((r) => r.id === 'friend') ? 'friend' : (rows.find((r) => r.default)?.id ?? rows[0]?.id),
+    defaultAbout: rows.find((r) => r.default)?.id ?? rows[0]?.id,
+    rows: rows.map((r) => ({
+      id: r.id,
+      who: r.label,
+      ...(r.warning ? { warning: r.warning } : {}),
+      cells: Object.fromEntries(PRONOUN_PERSONS.filter((p) => r[p].length).map((p) => [p, r[p].map(cell)])),
+    })),
+  }
+  console.log(`Pronoun table: ${rows.length} relationships`)
+
   const out = {
     generatedBy: 'which-dialect (scripts/build-cheatsheet.ts)',
     source: 'Wiktionary, via Kaikki.org; CC BY-SA 4.0',
     from: 'en',
     to: 'vi',
     toRegion: TO_REGION,
+    pronounTable,
     words,
   }
   await mkdir(dirname(OUT), { recursive: true })
