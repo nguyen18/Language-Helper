@@ -172,8 +172,8 @@ export function MyWordsControls({ words, onAdd, onReplace, translating, failedCo
                 </button>
               </>
             )}
-            <button type="button" onClick={() => fileRef.current?.click()}>
-              Upload a file
+            <button type="button" className="upload-words" onClick={() => fileRef.current?.click()}>
+              Upload your list of words
             </button>
             <input
               ref={fileRef}
