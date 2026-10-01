@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
 import { ACCEPTED_FILES, MAX_MY_WORDS, readWordsFile, wordsFromText } from '../lib/myWords'
-import { backendConfigured } from '../lib/translateWords'
+import { backendConfigured } from '../lib/backend'
 import { ROUTE_HREF } from '../lib/useRoute'
 
 type Props = {

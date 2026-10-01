@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react'
 import { toEntry, wordKey, type CheatsheetEntry, type GeneratedWord, type WordBank } from './cheatsheet'
 import type { TargetLanguage } from './languages'
+import { backendConfigured, callFunction } from './backend'
 
 // Translations for words the pre-built bank doesn't have, from the backend's `translate` function
 // (supabase/functions/translate), which translates with which-dialect and caches every word for
-// everyone. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (see web/.env.example); without
-// them, those words show as not translated.
-
-const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
-export const backendConfigured = Boolean(URL && KEY)
+// everyone. Without the backend's settings (see lib/backend.ts), those words show as not translated.
 
 // The function takes up to 25 words per request.
 const CHUNK = 25
@@ -20,13 +16,11 @@ const fetched = new Map<string, CheatsheetEntry>()
 const cacheKey = (target: TargetLanguage, word: string) => `${target.id}|${wordKey(word)}`
 
 async function fetchChunk(target: TargetLanguage, words: string[]): Promise<void> {
-  const res = await fetch(`${URL}/functions/v1/translate`, {
-    method: 'POST',
-    headers: { apikey: KEY!, 'content-type': 'application/json' },
-    body: JSON.stringify({ target: target.id, words }),
-  })
-  if (!res.ok) throw new Error(`Translating failed (${res.status})`)
-  const { entries } = (await res.json()) as { entries: GeneratedWord[] }
+  const { entries } = await callFunction<{ entries: GeneratedWord[] }>(
+    'translate',
+    { target: target.id, words },
+    'Translating failed',
+  )
   // Keyed by the word asked for, which the function echoes back.
   for (const e of entries) fetched.set(cacheKey(target, e.word), toEntry(e))
 }

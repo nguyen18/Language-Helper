@@ -8,10 +8,13 @@ import './App.css'
 
 // The Cheatsheet carries ~100 KB of dictionary data, so it loads only when opened.
 const Cheatsheet = lazy(() => import('./pages/Cheatsheet').then((m) => ({ default: m.Cheatsheet })))
+// The diary (editor, stickers, audio) loads only when opened, too.
+const Diary = lazy(() => import('./pages/Diary').then((m) => ({ default: m.Diary })))
 
 const MENU_ITEMS: { route: Route; label: string }[] = [
   { route: 'home', label: 'Home' },
   { route: 'cheatsheet', label: 'Cheatsheet' },
+  { route: 'diary', label: 'Diary' },
   { route: 'settings', label: 'Settings' },
 ]
 
@@ -36,6 +39,12 @@ function App() {
         <ErrorBoundary message="Couldn't load the cheatsheet. Check your connection and try again.">
           <Suspense fallback={<main className="app"><p className="muted">Loading the cheatsheet…</p></main>}>
             <Cheatsheet />
+          </Suspense>
+        </ErrorBoundary>
+      ) : route === 'diary' ? (
+        <ErrorBoundary message="Couldn't load the diary. Check your connection and try again.">
+          <Suspense fallback={<main className="app"><p className="muted">Loading your diary…</p></main>}>
+            <Diary />
           </Suspense>
         </ErrorBoundary>
       ) : route === 'settings' ? (
