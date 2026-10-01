@@ -8,13 +8,8 @@ export const TARGETS: Record<string, { code: string; region?: string }> = {
   'vi-Northern': { code: 'vi', region: 'Northern' },
 }
 
-// Storage folders per language (web/scripts/mirror-data.ts's DATA_SETS). The journal functions import
-// which-dialect 0.4.0 (see their deno.json), whose review and frames need vi 0.1.4's data; English (for
-// English words in an entry) didn't change, so it's shared with `translate`. Bump together.
-const VERSION = '0.4.0'
-const STORAGE = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/which-dialect`
-const SHARED: Record<string, string> = { en: '0.1.1/en' }
-export const dataUrl = (lang: string) => `${STORAGE}/${SHARED[lang] ?? `${VERSION}/${lang}`}`
+// which-dialect's data in Storage (see ./data.ts).
+export { dataUrl } from './data.ts'
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',

@@ -31,6 +31,8 @@ export type ReviewSentence = {
   frames: ReviewFrame[]
   /** English words with no translation, left as written. */
   unchecked: string[]
+  /** Words of several syllables in `corrected` ("hôm nay"), as offsets: added by check-spelling. */
+  words?: { start: number; end: number }[]
 }
 
 export type Review = {
@@ -169,13 +171,30 @@ export function shownWord(change: ReviewChange, pick: string | undefined): strin
 /** A key for `wordPicks` on a word Mai left alone: its sentence and where it starts in the corrected sentence. */
 export const keptWordKey = (sentence: number, offset: number) => `${sentence}@${offset}`
 
-/** Words and the runs between them, with offsets: the words Mai left alone become hoverable. */
-export function wordTokens(text: string): { text: string; start: number; word: boolean }[] {
-  return [...text.matchAll(/[\p{L}\p{M}\p{N}'’]+|[^\p{L}\p{M}\p{N}'’]+/gu)].map((m) => ({
+/**
+ * Words and the runs between them, with offsets: the words Mai left alone become hoverable. `joined` are
+ * words of several syllables (offsets into `text`), which stay one word ("hôm nay"), not "hôm" + "nay".
+ */
+export function wordTokens(text: string, joined: { start: number; end: number }[] = []): { text: string; start: number; word: boolean }[] {
+  const tokens = [...text.matchAll(/[\p{L}\p{M}\p{N}'’]+|[^\p{L}\p{M}\p{N}'’]+/gu)].map((m) => ({
     text: m[0],
     start: m.index!,
     word: /\p{L}/u.test(m[0]),
   }))
+  const out: typeof tokens = []
+  for (let i = 0; i < tokens.length; i++) {
+    const word = joined.find((w) => w.start === tokens[i].start)
+    if (!word) {
+      out.push(tokens[i])
+      continue
+    }
+    // Take the tokens up to the word's end as one word.
+    let j = i
+    while (j + 1 < tokens.length && tokens[j + 1].start < word.end) j++
+    out.push({ text: text.slice(word.start, word.end), start: word.start, word: true })
+    i = j
+  }
+  return out
 }
 
 // "Tôi" → pick "tới" shows as "Tới": a pick keeps the capital of the word it replaces.

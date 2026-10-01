@@ -349,11 +349,15 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
     pieces.push({ ...p, start: last ? last.start + last.text.length : 0 })
   }
   // The learner's own picks on words Mai left alone, for the notes ("nay → này").
+  // The sentence's words of several syllables, shifted to be relative to a piece starting at `from`; only
+  // those that lie wholly inside it (a change that overlaps one takes precedence).
+  const shift = (from: number, to = sentence.corrected.length) =>
+    (sentence.words ?? []).filter((w) => w.start >= from && w.end <= to).map((w) => ({ start: w.start - from, end: w.end - from }))
   const ownPicks = Object.entries(picks)
     .filter(([key]) => key.startsWith(`${index}@`))
     .map(([key, pick]) => {
       const offset = Number(key.slice(key.indexOf('@') + 1))
-      const word = wordTokens(sentence.corrected.slice(offset))[0]?.text ?? ''
+      const word = wordTokens(sentence.corrected.slice(offset), shift(offset))[0]?.text ?? ''
       return { word, pick: keepCapital(word, pick) }
     })
     .filter((p) => p.word && p.word.toLowerCase() !== p.pick.toLowerCase())
@@ -378,7 +382,7 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
             />
           ) : (
             // Words Mai left alone: hover for their meaning, other accents and other words.
-            wordTokens(p.text).map((t) => {
+            wordTokens(p.text, shift(p.start, p.start + p.text.length)).map((t) => {
               if (!t.word) return <span key={`${i}-${t.start}`}>{t.text}</span>
               const key = keptWordKey(index, p.start + t.start)
               return (

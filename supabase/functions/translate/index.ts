@@ -10,10 +10,11 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
 import * as wd from 'which-dialect'
+import { dataUrl } from '../_shared/data.ts'
 import { makeEntry, type Entry } from '../_shared/entries.ts'
 
 // Bump with the which-dialect import in deno.json: rows from another version aren't reused.
-const VERSION = '0.1.1'
+const VERSION = '0.5.0'
 // Languages the site offers (TARGET_LANGUAGES in web/src/lib/languages.ts).
 const TARGETS: Record<string, { code: string; region?: string }> = {
   'vi-Southern': { code: 'vi', region: 'Southern' },
@@ -27,8 +28,7 @@ const MAX_WORD_LENGTH = 60
 const PARALLEL = 4
 
 // Kept between requests while the function stays warm, so data files already loaded are reused.
-const DATA = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/which-dialect/${VERSION}`
-const translator = wd.createTranslator({ baseUrl: (lang) => `${DATA}/${lang}` })
+const translator = wd.createTranslator({ baseUrl: dataUrl })
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

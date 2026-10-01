@@ -1,10 +1,11 @@
 // Alternatives for a word the learner wrote that Mai left as it is, for the journal's word box:
-// POST { target, word } returns { word, accents, synonyms }, each a WordOption ({ text, meanings }):
+// POST { target, word } returns { word, accents, synonyms }, each a WordOption ({ text, meanings }). The
+// word can have several syllables ("hôm nay": check-spelling says which syllables make one word):
 //
 // - word: the word itself, with its meanings, so the learner can check it means what they meant.
-// - accents: the same letters with other accents, most common first ("muộn" → muốn, mượn), for languages
-//   written in syllables: a real word with the wrong tone passes the spellchecker, and this is how the
-//   learner catches it.
+// - accents: words with the same letters and other accents, most common first ("muộn" → muốn, mượn; "hom
+//   nay" → "hôm nay"), from which-dialect's dictionary.variants, for languages written in syllables: a real
+//   word with the wrong tone passes the spellchecker, and this is how the learner catches it.
 // - synonyms: other words with the same meaning from the dictionary, often another region's word
 //   ("ngô" → "bắp").
 //
@@ -16,7 +17,7 @@ import * as wd from 'which-dialect'
 import { dataUrl, TARGETS, withCors } from '../_shared/journal.ts'
 import { describeWord } from '../_shared/words.ts'
 
-const MAX_WORD_LENGTH = 40
+const MAX_WORD_LENGTH = 60
 const MAX_ACCENTS = 5
 const MAX_SYNONYMS = 6
 // Synonyms are read from this many of the word's first senses.
@@ -40,19 +41,14 @@ const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) =>
   }
   const dict = dictionary(target.code)
   const lower = word.trim().normalize('NFC').toLowerCase()
-  const [meta, syllables, entries] = await Promise.all([dict.meta(), dict.syllables(), dict.lookup(lower).catch(() => [])])
+  const [meta, variants, entries] = await Promise.all([
+    dict.meta(),
+    dict.variants(lower, { limit: MAX_ACCENTS }),
+    dict.lookup(lower).catch(() => []),
+  ])
   const allRegions = meta.regions.length
   const describe = (text: string) => describeWord(dict, wd.posName, text, allRegions)
-
-  // Same letters, other accents: syllables that are this one without its accents, most common first.
-  const bare = wd.plain(lower)
-  const accentWords = /\s/.test(lower)
-    ? []
-    : Object.entries(syllables)
-        .filter(([s]) => s !== lower && wd.plain(s) === bare)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, MAX_ACCENTS * 2)
-        .map(([s]) => s)
+  const accentWords = variants.map((v) => v.word)
 
   const synonymWords = [
     ...new Set(
@@ -65,10 +61,10 @@ const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) =>
     Promise.all(accentWords.map(describe)),
     Promise.all(synonymWords.map(describe)),
   ])
-  // Only real words: a syllable with no meaning of its own (part of longer words) isn't an alternative.
+  // Only words with a meaning to show.
   return Response.json({
     word: self,
-    accents: accents.filter((a) => a.meanings.length).slice(0, MAX_ACCENTS),
+    accents: accents.filter((a) => a.meanings.length),
     synonyms: synonyms.filter((s) => s.meanings.length),
   })
 })

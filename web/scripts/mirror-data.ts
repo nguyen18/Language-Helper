@@ -1,17 +1,16 @@
-// Copies which-dialect's dictionary data into Supabase Storage, where the `translate` and `check-spelling`
-// functions read it.
+// Copies which-dialect's dictionary data into Supabase Storage, where the backend's functions read it.
 //
 //   npm run mirror-data                  (from web/; to the local Supabase started with `npx supabase start`)
 //   SUPABASE_URL=… SUPABASE_SECRET_KEY=… npm run mirror-data      (to a hosted project)
 //
-// Why: the function translates words the pre-built Cheatsheet files don't have. Loading the data from
-// the jsDelivr CDN made that ~20 s per word, because files nobody had asked for recently take ~1 s each
-// and a word needs dozens of them in a row. From Storage, next to the function, every file is fast.
+// Why: the functions look words up as they go. Loading the data from the jsDelivr CDN made translating a
+// word ~20 s, because files nobody had asked for recently take ~1 s each and a word needs dozens of them in
+// a row. From Storage, next to the functions, every file is fast.
 //
 // The data comes from the published npm packages (which-dialect-en / -vi, the versions below) and goes
-// to the public bucket `which-dialect` as <folder>/<lang>/<path>. Already-uploaded files are skipped
-// (upsert: false), so an interrupted run can just be started again. Run it again when a function's
-// which-dialect version changes (DATA_SETS here and VERSION / DATA in that function).
+// to the public bucket `which-dialect` as <lang>@<version>/<path>. Already-uploaded files are skipped
+// (upsert: false), so an interrupted run can just be started again. Run it again when the data versions
+// change (DATA_SETS here and DATA_VERSIONS in supabase/functions/_shared/data.ts).
 
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -19,15 +18,12 @@ import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Each function reads its data from a folder named after the which-dialect version it imports:
-// `translate` uses 0.1.1 (en + vi 0.1.1); `check-spelling` and `sentence-frames` use 0.4.0, whose journal
-// review and sentence frames need vi 0.1.4 (checker settings, syllables, frames), and read English from
-// 0.1.1, which is unchanged, so it isn't copied twice. (Folders 0.2.0 and 0.3.0 were used before and can
-// be deleted.)
-const DATA_SETS: { folder: string; lang: string; version: string }[] = [
-  { folder: '0.1.1', lang: 'en', version: '0.1.1' },
-  { folder: '0.1.1', lang: 'vi', version: '0.1.1' },
-  { folder: '0.4.0', lang: 'vi', version: '0.1.4' },
+// The data package versions every function reads (supabase/functions/_shared/data.ts's DATA_VERSIONS must
+// match), each in a folder named <lang>@<version>. (Folders from before 2026-10-01's bump to which-dialect
+// 0.5.0, named after the package version: 0.1.1, 0.2.0, 0.3.0, 0.4.0, are unused and can be deleted.)
+const DATA_SETS: { lang: string; version: string }[] = [
+  { lang: 'en', version: '0.1.1' },
+  { lang: 'vi', version: '0.1.4' },
 ]
 const BUCKET = 'which-dialect'
 const PARALLEL = 24
@@ -83,7 +79,8 @@ async function main() {
   })
   if (!bucket.ok && !(await bucket.text()).includes('already exists')) throw new Error(`Creating the bucket failed (${bucket.status})`)
 
-  for (const { folder, lang, version } of DATA_SETS) {
+  for (const { lang, version } of DATA_SETS) {
+    const folder = `${lang}@${version}`
     const data = packageData(lang, version)
     const paths = await files(data)
     let done = 0
@@ -92,7 +89,7 @@ async function main() {
     await Promise.all(
       Array.from({ length: PARALLEL }, async () => {
         for (let path = queue.shift(); path; path = queue.shift()) {
-          const name = `${folder}/${lang}/${relative(data, path)}`
+          const name = `${folder}/${relative(data, path)}`
           const res = await fetch(`${url}/storage/v1/object/${BUCKET}/${name}`, {
             method: 'POST',
             headers: { ...headers, 'content-type': 'application/json', 'x-upsert': 'false' },
@@ -103,11 +100,11 @@ async function main() {
             if (res.status === 409 || text.includes('already exists') || text.includes('Duplicate')) skipped++
             else throw new Error(`Uploading ${name} failed (${res.status}): ${text}`)
           }
-          if (++done % 1000 === 0) console.log(`  ${folder}/${lang}: ${done}/${paths.length}`)
+          if (++done % 1000 === 0) console.log(`  ${folder}: ${done}/${paths.length}`)
         }
       }),
     )
-    console.log(`${folder}/${lang} (which-dialect-${lang}@${version}): ${paths.length} files (${skipped} were already there)`)
+    console.log(`${folder}: ${paths.length} files (${skipped} were already there)`)
   }
 }
 

@@ -70,6 +70,16 @@ const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) =>
     }
   }
   await Promise.all(described)
+  // Each sentence's words of several syllables ("hôm nay"), as offsets into its corrected text, so the
+  // journal treats them as one word (one meaning, one box, one pick) rather than syllable by syllable.
+  await Promise.all(
+    review.sentences.map(async (sentence) => {
+      const words = await dictionary(target.code).segment(sentence.corrected)
+      ;(sentence as typeof sentence & { words?: { start: number; end: number }[] }).words = words
+        .filter((w) => w.entries.length && /\s/.test(w.text))
+        .map((w) => ({ start: w.start, end: w.end }))
+    }),
+  )
   return Response.json(review)
 })
 
