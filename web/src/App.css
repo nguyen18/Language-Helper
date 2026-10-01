@@ -1297,7 +1297,7 @@ a.discover-link:hover {
   font-size: 0.85rem;
 }
 
-/* Diary */
+/* Journal */
 .language-tag {
   font-size: 0.8rem;
   font-weight: 600;
@@ -1308,23 +1308,23 @@ a.discover-link:hover {
   white-space: nowrap;
 }
 
-.diary-new {
+.journal-new {
   margin-top: 24px;
 }
 
-.diary-list {
+.journal-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.diary-editor .form-label {
+.journal-editor .form-label {
   display: block;
   margin: 16px 0 6px;
   font-weight: 600;
 }
 
-.diary-when {
+.journal-when {
   font: inherit;
   color: var(--text);
   padding: 6px 10px;
@@ -1334,12 +1334,12 @@ a.discover-link:hover {
 }
 
 /* The entry sheet: lined paper; photos and stickers sit on top, sized in cqw (fractions of its width). */
-.diary-sheet-frame {
+.journal-sheet-frame {
   container-type: inline-size;
   margin-top: 16px;
 }
 
-.diary-sheet {
+.journal-sheet {
   --line: 1.9rem;
   position: relative;
   overflow: hidden;
@@ -1358,7 +1358,7 @@ a.discover-link:hover {
 }
 
 /* Your own words, in blue, written on the lines. */
-.diary-text {
+.journal-text {
   display: block;
   width: 100%;
   margin: 0;
@@ -1374,16 +1374,16 @@ a.discover-link:hover {
   overflow-wrap: anywhere;
 }
 
-textarea.diary-text {
+textarea.journal-text {
   min-height: calc(var(--line) * 8 + 38px);
   overflow: hidden;
 }
 
-textarea.diary-text:focus {
+textarea.journal-text:focus {
   outline: none;
 }
 
-.diary-sheet.editing:focus-within {
+.journal-sheet.editing:focus-within {
   border-color: var(--accent);
 }
 
@@ -1411,13 +1411,13 @@ textarea.diary-text:focus {
   filter: drop-shadow(0 2px 3px rgba(35, 37, 110, 0.3));
 }
 
-.diary-sheet.editing .sheet-item {
+.journal-sheet.editing .sheet-item {
   cursor: grab;
   touch-action: none;
 }
 
 .sheet-item.selected,
-.diary-sheet.editing .sheet-item:focus-visible {
+.journal-sheet.editing .sheet-item:focus-visible {
   outline: 2px dashed var(--accent);
   outline-offset: 4px;
 }
@@ -1456,7 +1456,7 @@ textarea.diary-text:focus {
   cursor: nwse-resize;
 }
 
-.diary-tools {
+.journal-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1514,7 +1514,7 @@ textarea.diary-text:focus {
   color: var(--muted);
 }
 
-.diary-audio {
+.journal-audio {
   margin-top: 4px;
 }
 
@@ -1538,7 +1538,7 @@ textarea.diary-text:focus {
   max-width: 100%;
 }
 
-.diary-nudge {
+.journal-nudge {
   margin: 12px 0 0;
   padding: 8px 12px;
   font-size: 0.9rem;
@@ -1564,13 +1564,13 @@ textarea.diary-text:focus {
 }
 
 /* Mai's corrected copy, in red, under the original. */
-.diary-correction {
+.journal-correction {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px dashed var(--border);
 }
 
-.diary-correction-label {
+.journal-correction-label {
   margin: 0 0 6px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -1579,7 +1579,7 @@ textarea.diary-text:focus {
   color: var(--translation);
 }
 
-.diary-corrected {
+.journal-corrected {
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.8;
@@ -1588,7 +1588,7 @@ textarea.diary-text:focus {
   overflow-wrap: anywhere;
 }
 
-.diary-corrected mark {
+.journal-corrected mark {
   color: inherit;
   font-weight: 700;
   background: none;
@@ -1596,30 +1596,30 @@ textarea.diary-text:focus {
   text-underline-offset: 4px;
 }
 
-.diary-notes {
+.journal-notes {
   margin: 10px 0 0;
   padding-left: 18px;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
-.diary-notes s {
+.journal-notes s {
   color: var(--accent);
 }
 
-.diary-notes strong {
+.journal-notes strong {
   color: var(--translation);
 }
 
-.diary-tip {
+.journal-tip {
   font-style: italic;
 }
 
-.diary-check-status {
+.journal-check-status {
   margin-top: 12px;
 }
 
-.diary-entry-actions {
+.journal-entry-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1627,7 +1627,7 @@ textarea.diary-text:focus {
   margin-top: 16px;
 }
 
-.diary-confirm {
+.journal-confirm {
   font-size: 0.9rem;
 }
 
@@ -1674,22 +1674,22 @@ button.chip.danger {
 }
 
 /* Sentence frames the entry follows, for reusing the patterns. */
-.diary-frames {
+.journal-frames {
   margin-top: 10px;
   font-size: 0.85rem;
 }
 
-.diary-frames summary {
+.journal-frames summary {
   cursor: pointer;
   color: var(--accent);
   font-weight: 600;
 }
 
-.diary-frames ul {
+.journal-frames ul {
   margin: 6px 0 0;
   padding-left: 18px;
 }
 
-.diary-frames li span:first-child {
+.journal-frames li span:first-child {
   font-weight: 600;
 }

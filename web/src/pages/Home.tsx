@@ -96,12 +96,12 @@ export function Home() {
       </section>
 
       <section className="card">
-        <h2>Diary</h2>
+        <h2>Journal</h2>
         <p className="muted">
           Write (or say) a little about your day in the language you're learning, with photos and stickers. Mai
           corrects it underneath.
         </p>
-        <a className="button primary" href={ROUTE_HREF.diary}>
+        <a className="button primary" href={ROUTE_HREF.journal}>
           Open
         </a>
       </section>

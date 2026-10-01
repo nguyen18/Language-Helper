@@ -1,7 +1,7 @@
 import { callFunction } from './backend'
 import type { TargetLanguage } from './languages'
 
-// Grammar checking for diary entries, by the backend's `check-grammar` function
+// Grammar checking for journal entries, by the backend's `check-grammar` function
 // (supabase/functions/check-grammar), which runs which-dialect's journal review: the grammar checker on
 // the whole entry, then each sentence against sentence frames, with English parts put into the target
 // language where a frame or a short translation covers them. It only speaks up when it's confident, so no

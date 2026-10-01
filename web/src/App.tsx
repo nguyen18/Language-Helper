@@ -8,13 +8,13 @@ import './App.css'
 
 // The Cheatsheet carries ~100 KB of dictionary data, so it loads only when opened.
 const Cheatsheet = lazy(() => import('./pages/Cheatsheet').then((m) => ({ default: m.Cheatsheet })))
-// The diary (editor, stickers, audio) loads only when opened, too.
-const Diary = lazy(() => import('./pages/Diary').then((m) => ({ default: m.Diary })))
+// The journal (editor, stickers, audio) loads only when opened, too.
+const Journal = lazy(() => import('./pages/Journal').then((m) => ({ default: m.Journal })))
 
 const MENU_ITEMS: { route: Route; label: string }[] = [
   { route: 'home', label: 'Home' },
   { route: 'cheatsheet', label: 'Cheatsheet' },
-  { route: 'diary', label: 'Diary' },
+  { route: 'journal', label: 'Journal' },
   { route: 'settings', label: 'Settings' },
 ]
 
@@ -41,10 +41,10 @@ function App() {
             <Cheatsheet />
           </Suspense>
         </ErrorBoundary>
-      ) : route === 'diary' ? (
-        <ErrorBoundary message="Couldn't load the diary. Check your connection and try again.">
-          <Suspense fallback={<main className="app"><p className="muted">Loading your diary…</p></main>}>
-            <Diary />
+      ) : route === 'journal' ? (
+        <ErrorBoundary message="Couldn't load the journal. Check your connection and try again.">
+          <Suspense fallback={<main className="app"><p className="muted">Loading your journal…</p></main>}>
+            <Journal />
           </Suspense>
         </ErrorBoundary>
       ) : route === 'settings' ? (

@@ -1,6 +1,6 @@
-# Diary / journal: corrections and sentence frames (plan)
+# Journal: corrections and sentence frames (plan)
 
-How the diary's review could look, and how which-dialect does the work. Written 2026-10-01 alongside
+How the journal's review could look, and how which-dialect does the work. Written 2026-10-01 alongside
 which-dialect's journal review (`createReviewer`), spellchecker (`createChecker`) and sentence frames
 (`createPhrasebook`); updated the same day for which-dialect 0.4.0, where the checker became a
 spellchecker by default. **No LLM** (owner's decision, 2026-10-01): everything below is rule-based, from
@@ -51,7 +51,7 @@ UI pieces:
   requests, greetings) uses `phrasebook.frames({ lang, region, topic })`. Frames suggest; they don't change
   the learner's sentence.
 - **Region** comes from the target language setting (vi-Southern, vi-Central, vi-Northern): translations
-  use the region's words (*expensive* → Southern *mắc*, Northern *đắt*). A diary has no listener: people
+  use the region's words (*expensive* → Southern *mắc*, Northern *đắt*). A journal has no listener: people
   written about (*má*, *thầy*) aren't treated as who you're talking to.
 
 ## How which-dialect does it
@@ -74,9 +74,9 @@ Sentence frames come from `createPhrasebook()`: `frames()` to list them for a re
 to fill one, `match(english)` for an English sentence. 34 frames so far; more are planned (which-dialect's
 FUTURE_IMPROVEMENTS.md).
 
-## Fitting it into the current diary code
+## Fitting it into the current journal code
 
-The diary page in progress (branch `diary`: `DiarySheet.tsx`, `lib/diary.ts`, `lib/grammar.ts`, and the
+The journal page in progress (branch `journal`: `JournalSheet.tsx`, `lib/journal.ts`, `lib/grammar.ts`, and the
 `check-grammar` Supabase function) runs which-dialect's checker on an entry and applies errors and warnings,
 with suggestions as tips. Moving to the review:
 

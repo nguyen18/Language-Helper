@@ -1,22 +1,22 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { AudioNotePlayer } from '../components/AudioNoteRecorder'
-import { DiaryEditor } from '../components/DiaryEditor'
-import { DiarySheet } from '../components/DiarySheet'
+import { JournalEditor } from '../components/JournalEditor'
+import { JournalSheet } from '../components/JournalSheet'
 import { backendConfigured } from '../lib/backend'
-import { useDiary, type DiaryEntry } from '../lib/diary'
+import { useJournal, type JournalEntry } from '../lib/journal'
 import { checkGrammar, correctedPieces, reviewNotes, type GrammarCheck } from '../lib/grammar'
 import { targetById, useTargetLanguage } from '../lib/languages'
 
-// The diary: entries written in the target language only, latest on top. Each shows the user's own
+// The journal: entries written in the target language only, latest on top. Each shows the user's own
 // words untouched (blue), and underneath, Mai's corrected copy (red) from the grammar checker.
 
-type Editing = { entry?: DiaryEntry } | null
+type Editing = { entry?: JournalEntry } | null
 // Per entry: a check in progress, or the last one that failed.
 type CheckState = Record<string, 'checking' | 'failed'>
 
-export function Diary() {
+export function Journal() {
   const [target] = useTargetLanguage()
-  const { entries, error, save, remove } = useDiary()
+  const { entries, error, save, remove } = useJournal()
   const [editing, setEditing] = useState<Editing>(null)
   const [checks, setChecks] = useState<CheckState>({})
   // The latest entries, for checks that finish after the entry was edited again.
@@ -25,7 +25,7 @@ export function Diary() {
     entriesRef.current = entries
   })
 
-  const runCheck = async (entry: DiaryEntry) => {
+  const runCheck = async (entry: JournalEntry) => {
     if (!entry.text || !backendConfigured) return
     setChecks((c) => ({ ...c, [entry.id]: 'checking' }))
     try {
@@ -43,7 +43,7 @@ export function Diary() {
     }
   }
 
-  const onSave = async (entry: DiaryEntry) => {
+  const onSave = async (entry: JournalEntry) => {
     await save(entry)
     setEditing(null)
     window.scrollTo(0, 0)
@@ -54,7 +54,7 @@ export function Diary() {
   return (
     <main className="app">
       <header className="header">
-        <h1>Diary</h1>
+        <h1>Journal</h1>
         <p className="muted">
           Write a little about your day in <strong>{target.label}</strong>, and only {target.label}. Your words stay
           as you wrote them, in blue; Mai's corrected copy goes underneath, in red.
@@ -64,7 +64,7 @@ export function Diary() {
       {error && <p className="error">{error}</p>}
 
       {editing ? (
-        <DiaryEditor
+        <JournalEditor
           key={editing.entry?.id ?? 'new'}
           target={editing.entry ? targetById(editing.entry.targetId) : target}
           entry={editing.entry}
@@ -72,7 +72,7 @@ export function Diary() {
           onCancel={() => setEditing(null)}
         />
       ) : (
-        <div className="footer-actions diary-new">
+        <div className="footer-actions journal-new">
           <button type="button" className="primary" onClick={() => setEditing({})}>
             ✎ New entry
           </button>
@@ -80,7 +80,7 @@ export function Diary() {
       )}
 
       {entries === null ? (
-        <p className="muted">Loading your diary…</p>
+        <p className="muted">Loading your journal…</p>
       ) : entries.length === 0 ? (
         !editing && (
           <section className="card">
@@ -91,7 +91,7 @@ export function Diary() {
           </section>
         )
       ) : (
-        <ol className="diary-list">
+        <ol className="journal-list">
           {entries
             .filter((e) => e.id !== editing?.entry?.id)
             .map((entry) => (
@@ -124,7 +124,7 @@ const formatWhen = (when: string) =>
   })
 
 type CardProps = {
-  entry: DiaryEntry
+  entry: JournalEntry
   checkState?: 'checking' | 'failed'
   onCheck: () => void
   onEdit: () => void
@@ -138,7 +138,7 @@ function EntryCard({ entry, checkState, onCheck, onEdit, onDelete }: CardProps) 
   const check = entry.check?.input === entry.text && entry.check.review ? entry.check : undefined
 
   return (
-    <li className="card diary-entry">
+    <li className="card journal-entry">
       <div className="card-head">
         <h2>
           <time dateTime={entry.when}>{formatWhen(entry.when)}</time>
@@ -147,24 +147,24 @@ function EntryCard({ entry, checkState, onCheck, onEdit, onDelete }: CardProps) 
       </div>
 
       {(entry.text || entry.items.length > 0) && (
-        <DiarySheet text={entry.text} items={entry.items} lang={lang.code} />
+        <JournalSheet text={entry.text} items={entry.items} lang={lang.code} />
       )}
       {entry.audio && <AudioNotePlayer audio={entry.audio} />}
 
       {entry.text ? (
         <Correction check={check} state={checkState} onCheck={onCheck} lang={lang.code} />
       ) : (
-        <p className="diary-nudge">
+        <p className="journal-nudge">
           Type out what you said in your audio note so Mai can check it. <button type="button" className="inline-link" onClick={onEdit}>Add it now</button>
         </p>
       )}
 
-      <div className="diary-entry-actions">
+      <div className="journal-entry-actions">
         <button type="button" className="chip" onClick={onEdit}>
           Edit
         </button>
         {confirming ? (
-          <span className="diary-confirm">
+          <span className="journal-confirm">
             Delete this entry?{' '}
             <button type="button" className="chip danger" onClick={onDelete}>
               Delete
@@ -187,12 +187,12 @@ type CorrectionProps = { check?: GrammarCheck; state?: 'checking' | 'failed'; on
 
 function Correction({ check, state, onCheck, lang }: CorrectionProps) {
   if (!backendConfigured) {
-    return <p className="muted diary-check-status">Grammar checking isn't set up on this site yet.</p>
+    return <p className="muted journal-check-status">Grammar checking isn't set up on this site yet.</p>
   }
-  if (state === 'checking') return <p className="muted diary-check-status">Mai is checking your grammar…</p>
+  if (state === 'checking') return <p className="muted journal-check-status">Mai is checking your grammar…</p>
   if (!check) {
     return (
-      <p className="muted diary-check-status">
+      <p className="muted journal-check-status">
         {state === 'failed' ? "Couldn't check the grammar. " : 'Not checked yet. '}
         <button type="button" className="inline-link" onClick={onCheck}>
           {state === 'failed' ? 'Try again' : 'Check now'}
@@ -205,38 +205,38 @@ function Correction({ check, state, onCheck, lang }: CorrectionProps) {
   const { changes, hints, frames, unchecked } = reviewNotes(check.review)
 
   return (
-    <section className="diary-correction" aria-label="Mai's corrections">
-      <p className="diary-correction-label">
+    <section className="journal-correction" aria-label="Mai's corrections">
+      <p className="journal-correction-label">
         {changes.length ? `Corrected by Mai · ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}` : 'Checked by Mai'}
       </p>
       {changes.length ? (
-        <p className="diary-corrected" lang={lang}>
+        <p className="journal-corrected" lang={lang}>
           {pieces.map((p, i) => (p.changed ? <mark key={i}>{p.text}</mark> : p.text))}
         </p>
       ) : (
         <p className="muted">Nothing to correct. (Mai only points out what she's sure about.)</p>
       )}
       {changes.length + hints.length + unchecked.length > 0 && (
-        <ul className="diary-notes">
+        <ul className="journal-notes">
           {changes.map((c, i) => (
             <li key={`change-${i}`}>
               {c.from ? <s lang={lang}>{c.from}</s> : 'Add'} → <strong lang={lang}>{c.to}</strong>: {c.why}
             </li>
           ))}
           {hints.map((h, i) => (
-            <li key={`hint-${i}`} className="diary-tip">
+            <li key={`hint-${i}`} className="journal-tip">
               Tip: {h.message}
             </li>
           ))}
           {unchecked.map((u, i) => (
-            <li key={`unchecked-${i}`} className="diary-tip">
+            <li key={`unchecked-${i}`} className="journal-tip">
               Mai couldn't check “{u}”. Try writing it in the language you're learning.
             </li>
           ))}
         </ul>
       )}
       {frames.length > 0 && (
-        <details className="diary-frames">
+        <details className="journal-frames">
           <summary>
             Sentence patterns you used ({frames.length})
           </summary>

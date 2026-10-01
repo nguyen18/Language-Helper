@@ -1,4 +1,4 @@
-// Checks a diary entry with which-dialect's journal review: POST { target, text } returns its Review
+// Checks a journal entry with which-dialect's journal review: POST { target, text } returns its Review
 // ({ text, corrected, sentences }): the grammar checker runs on the whole entry and its errors and warnings
 // are applied, then each sentence is checked against sentence frames (a missing "không", a frame word from
 // another region), and English slipped into the entry is put into the target language where a frame or a
@@ -45,7 +45,7 @@ const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) =>
       { status: 400 },
     )
   }
-  // A diary has no listener: people written about (má, thầy) aren't the person spoken to, so pronouns are
+  // A journal has no listener: people written about (má, thầy) aren't the person spoken to, so pronouns are
   // only checked against each other and no polite endings are suggested. English is the learner's language.
   const review = await reviewer.review(text, { lang: target.code, region: target.region, base: 'en' })
   return Response.json(review)

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
-import { objectUrl, type SheetItem } from '../lib/diary'
+import { objectUrl, type SheetItem } from '../lib/journal'
 
-// The entry sheet: the diary text on lined paper, with photos and stickers placed anywhere on it.
+// The entry sheet: the journal text on lined paper, with photos and stickers placed anywhere on it.
 // Positions and sizes are fractions of the sheet's width (see SheetItem), so the page looks the same
 // on a phone and a laptop; CSS turns them into lengths with container query units (cqw).
 
@@ -21,7 +21,7 @@ type Props = {
   label?: string
 }
 
-export function DiarySheet({ text, items, onTextChange, onItemsChange, placeholder, lang, label }: Props) {
+export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, lang, label }: Props) {
   const editable = Boolean(onTextChange && onItemsChange)
   const sheetRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
@@ -134,17 +134,17 @@ export function DiarySheet({ text, items, onTextChange, onItemsChange, placehold
   }
 
   return (
-    <div className="diary-sheet-frame">
+    <div className="journal-sheet-frame">
       <div
         ref={sheetRef}
-        className={`diary-sheet${editable ? ' editing' : ''}`}
+        className={`journal-sheet${editable ? ' editing' : ''}`}
         style={{ minHeight: `calc(${bottom * 100}cqw + 24px)` }}
         onPointerDown={() => setSelected(null)}
       >
         {editable ? (
           <textarea
             ref={textRef}
-            className="diary-text"
+            className="journal-text"
             value={text}
             lang={lang}
             aria-label={label}
@@ -154,7 +154,7 @@ export function DiarySheet({ text, items, onTextChange, onItemsChange, placehold
             rows={8}
           />
         ) : (
-          <p className="diary-text" lang={lang}>
+          <p className="journal-text" lang={lang}>
             {text}
           </p>
         )}

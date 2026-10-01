@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { objectUrl, type AudioNote } from '../lib/diary'
+import { objectUrl, type AudioNote } from '../lib/journal'
 
-// An optional spoken note for a diary entry, recorded in the browser (MediaRecorder). The recording
+// An optional spoken note for a journal entry, recorded in the browser (MediaRecorder). The recording
 // stays on this device with the entry.
 
 const recordingSupported = typeof window !== 'undefined' && 'MediaRecorder' in window && !!navigator.mediaDevices

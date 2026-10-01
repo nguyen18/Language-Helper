@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { newId, nowLocal, objectUrl, useStickers, type DiaryEntry, type SheetItem, type Sticker } from '../lib/diary'
+import { newId, nowLocal, objectUrl, useStickers, type JournalEntry, type SheetItem, type Sticker } from '../lib/journal'
 import { shrinkImage } from '../lib/images'
 import type { TargetLanguage } from '../lib/languages'
 import { AudioNoteRecorder } from './AudioNoteRecorder'
-import { DiarySheet } from './DiarySheet'
+import { JournalSheet } from './JournalSheet'
 import { StickerMaker } from './StickerMaker'
 
-// Writing or editing a diary entry: when it happened, the entry sheet (text, photos and stickers placed
+// Writing or editing a journal entry: when it happened, the entry sheet (text, photos and stickers placed
 // anywhere), and an optional audio note.
 
 type Props = {
   target: TargetLanguage
   /** The entry being edited; a new one when missing. */
-  entry?: DiaryEntry
-  onSave: (entry: DiaryEntry) => Promise<void>
+  entry?: JournalEntry
+  onSave: (entry: JournalEntry) => Promise<void>
   onCancel: () => void
 }
 
@@ -39,7 +39,7 @@ function textBottom(frame: HTMLElement | null): number {
   return bottom / frame.getBoundingClientRect().width
 }
 
-export function DiaryEditor({ target, entry, onSave, onCancel }: Props) {
+export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
   const [when, setWhen] = useState(entry?.when ?? nowLocal)
   const [text, setText] = useState(entry?.text ?? '')
   const [items, setItems] = useState<SheetItem[]>(entry?.items ?? [])
@@ -118,25 +118,25 @@ export function DiaryEditor({ target, entry, onSave, onCancel }: Props) {
   }
 
   return (
-    <section className="card diary-editor" aria-label={entry ? 'Edit entry' : 'New entry'}>
+    <section className="card journal-editor" aria-label={entry ? 'Edit entry' : 'New entry'}>
       <div className="card-head">
         <h2>{entry ? 'Edit entry' : 'New entry'}</h2>
         <span className="language-tag">{target.label} only</span>
       </div>
 
-      <label className="form-label" htmlFor="diary-when">
+      <label className="form-label" htmlFor="journal-when">
         Date and time
       </label>
       <input
-        id="diary-when"
-        className="diary-when"
+        id="journal-when"
+        className="journal-when"
         type="datetime-local"
         value={when}
         onChange={(e) => setWhen(e.target.value)}
       />
 
       <div ref={sheetRef}>
-        <DiarySheet
+        <JournalSheet
           text={text}
           items={items}
           onTextChange={setText}
@@ -147,7 +147,7 @@ export function DiaryEditor({ target, entry, onSave, onCancel }: Props) {
         />
       </div>
 
-      <div className="diary-tools">
+      <div className="journal-tools">
         <button type="button" onClick={() => photoRef.current?.click()}>
           📷 Add a photo
         </button>
@@ -179,11 +179,11 @@ export function DiaryEditor({ target, entry, onSave, onCancel }: Props) {
         )}
       </div>
 
-      <div className="diary-audio">
+      <div className="journal-audio">
         <p className="form-label">Audio note (optional)</p>
         <AudioNoteRecorder audio={audio} onChange={setAudio} />
         {audio && (
-          <p className={spokenOnly ? 'diary-nudge' : 'muted'}>
+          <p className={spokenOnly ? 'journal-nudge' : 'muted'}>
             Spoke your entry? Type out what you said on the page above, so Mai can check it.
           </p>
         )}

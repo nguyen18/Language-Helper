@@ -1,4 +1,4 @@
-// Image helpers for the diary: shrinking photos before they're saved, and cutting stickers out of photos.
+// Image helpers for the journal: shrinking photos before they're saved, and cutting stickers out of photos.
 
 export type Point = { x: number; y: number }
 

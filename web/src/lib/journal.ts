@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { GrammarCheck } from './grammar'
 
-// Diary entries and the user's stickers, saved in this browser's IndexedDB (photos, stickers and audio
+// Journal entries and the user's stickers, saved in this browser's IndexedDB (photos, stickers and audio
 // are files, too big for localStorage). There are no accounts yet, so they stay on this device.
 
 /** A photo or sticker placed on the entry sheet. Sizes are fractions of the sheet's width, so it scales. */
@@ -21,7 +21,7 @@ export type SheetItem = {
 
 export type AudioNote = { blob: Blob; seconds: number }
 
-export type DiaryEntry = {
+export type JournalEntry = {
   id: string
   /** The language the entry is written in (TargetLanguage.id), set when it was first saved. */
   targetId: string
@@ -39,17 +39,29 @@ export type DiaryEntry = {
 export type Sticker = { id: string; image: Blob; aspect: number; createdAt: string }
 
 const DB_NAME = 'language-helper'
-const ENTRIES = 'diary-entries'
+const ENTRIES = 'journal-entries'
+// Before 2026-10-01's rename, the journal was the "diary".
+const OLD_ENTRIES = 'diary-entries'
 const STICKERS = 'stickers'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
 function db(): Promise<IDBDatabase> {
   dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1)
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(ENTRIES, { keyPath: 'id' })
-      req.result.createObjectStore(STICKERS, { keyPath: 'id' })
+    const req = indexedDB.open(DB_NAME, 2)
+    req.onupgradeneeded = (e) => {
+      const db = req.result
+      if (e.oldVersion < 1) db.createObjectStore(STICKERS, { keyPath: 'id' })
+      db.createObjectStore(ENTRIES, { keyPath: 'id' })
+      // Version 1 called the journal a diary: move its entries over.
+      if (db.objectStoreNames.contains(OLD_ENTRIES)) {
+        const tx = req.transaction!
+        const read = tx.objectStore(OLD_ENTRIES).getAll()
+        read.onsuccess = () => {
+          for (const entry of read.result) tx.objectStore(ENTRIES).put(entry)
+          db.deleteObjectStore(OLD_ENTRIES)
+        }
+      }
     }
     req.onsuccess = () => {
       // Let go when another tab upgrades or deletes the database, instead of blocking it.
@@ -77,7 +89,7 @@ async function run<T>(store: string, mode: IDBTransactionMode, op: (s: IDBObject
   })
 }
 
-// Asks the browser not to clear the diary when space runs low. Best effort: some browsers decide alone.
+// Asks the browser not to clear the journal when space runs low. Best effort: some browsers decide alone.
 function askToPersist() {
   void navigator.storage?.persist?.().catch(() => {})
 }
@@ -92,24 +104,24 @@ export function nowLocal(): string {
 }
 
 // Latest on top: by the date the user gave, then by when the entry was made.
-const latestFirst = (a: DiaryEntry, b: DiaryEntry) =>
+const latestFirst = (a: JournalEntry, b: JournalEntry) =>
   b.when.localeCompare(a.when) || b.createdAt.localeCompare(a.createdAt)
 
-/** The diary, latest entry first. `error` is set when this browser can't store it (e.g. private mode). */
-export function useDiary() {
-  const [entries, setEntries] = useState<DiaryEntry[] | null>(null)
+/** The journal, latest entry first. `error` is set when this browser can't store it (e.g. private mode). */
+export function useJournal() {
+  const [entries, setEntries] = useState<JournalEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    run<DiaryEntry[]>(ENTRIES, 'readonly', (s) => s.getAll())
+    run<JournalEntry[]>(ENTRIES, 'readonly', (s) => s.getAll())
       .then((all) => setEntries(all.sort(latestFirst)))
       .catch(() => {
         setEntries([])
-        setError("This browser can't save diary entries (private browsing can block it).")
+        setError("This browser can't save journal entries (private browsing can block it).")
       })
   }, [])
 
-  const save = useCallback(async (entry: DiaryEntry) => {
+  const save = useCallback(async (entry: JournalEntry) => {
     await run(ENTRIES, 'readwrite', (s) => s.put(entry))
     askToPersist()
     setEntries((list) => [...(list ?? []).filter((e) => e.id !== entry.id), entry].sort(latestFirst))
@@ -148,7 +160,7 @@ export function useStickers() {
 
 // Object URLs for saved pictures and recordings, one per Blob and kept until the page closes. Revoking
 // them as components unmount would break pictures shown in two places at once (an entry and the editor),
-// and a diary holds few enough files that keeping them is cheap.
+// and a journal holds few enough files that keeping them is cheap.
 const objectUrls = new WeakMap<Blob, string>()
 
 /** An object URL for a Blob, to show it in <img> or <audio>. */
