@@ -1,17 +1,19 @@
 // Generates the Cheatsheet's meanings and translations with which-dialect.
 //
-//   npm run cheatsheet            (from web/)
+//   npm run cheatsheet                       (from web/; every language in TARGET_LANGUAGES)
+//   npm run cheatsheet -- vi-Northern        (just these, by id)
 //
-// For each word in TOP_100_WORDS, asks which-dialect for the word's English meanings and their
-// Southern Vietnamese translations, and writes public/cheatsheet/top-100.json (fetched by the Cheatsheet
-// page when it opens, so the ~1 MB of data isn't in the JavaScript bundle). Run it again after
-// changing the word list or updating which-dialect's data.
+// For each language the site can translate into (TARGET_LANGUAGES in src/lib/languages.ts, picked on the
+// Settings page) and each word in TOP_100_WORDS, asks which-dialect for the word's English meanings and
+// their translations, and writes public/cheatsheet/top-100.<id>.json, e.g. top-100.vi-Southern.json
+// (fetched by the Cheatsheet page when it opens, so the ~1 MB of data isn't in the JavaScript bundle).
+// Run it again after changing the word list or the languages, or updating which-dialect's data.
 //
 // which-dialect is on npm; its data loads from the jsDelivr CDN (which-dialect-<lang>). To use a local
 // checkout instead (offline, or unpublished data), set WHICH_DIALECT_DATA=<path to which-dialect/packages>.
 //
-// It also writes the Vietnamese pronoun table (dictionary.pronouns(), Southern) for the "who are you
-// talking to?" boxes on the pronoun words.
+// It also writes the language's pronoun table (dictionary.pronouns() for the dialect; Vietnamese has one)
+// for the "who are you talking to?" boxes on the pronoun words.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -26,15 +28,15 @@ import {
   type PronounChoice,
   type Translator,
 } from 'which-dialect'
+import { TARGET_LANGUAGES, type TargetLanguage } from '../src/lib/languages.ts'
 import { TOP_100_WORDS } from '../src/lib/topWords.ts'
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..')
 const LOCAL_DATA = process.env.WHICH_DIALECT_DATA ? resolve(process.env.WHICH_DIALECT_DATA) : null
 const localLoad = (lang: string): LoadJson | undefined =>
   LOCAL_DATA ? async (path) => JSON.parse(await readFile(join(LOCAL_DATA, lang, 'data', path), 'utf8')) : undefined
-const OUT = join(WEB, 'public', 'cheatsheet', 'top-100.json')
+const outFile = (target: TargetLanguage) => join(WEB, 'public', 'cheatsheet', `top-100.${target.id}.json`)
 
-const TO_REGION = 'Southern'
 const MAX_TRANSLATIONS = 5
 const MAX_GLOSS = 140
 
@@ -80,7 +82,7 @@ const PART_HINTS: Record<string, PartHint> = {
 const MAX_PART_OPTIONS = 4
 const MAX_PRONOUN_OPTIONS = 6
 
-async function partsOf(tr: Translator, word: string) {
+async function partsOf(tr: Translator, target: TargetLanguage, word: string) {
   const parts = contractionParts(word)
   if (!parts) return undefined
   return Promise.all(
@@ -88,7 +90,7 @@ async function partsOf(tr: Translator, word: string) {
       if (HELPERS.has(part.toLowerCase())) return { word: part, helper: true, options: [] }
       const hint = PART_HINTS[part.toLowerCase()] ?? PRONOUN_HINT
       const limit = hint === PRONOUN_HINT ? MAX_PRONOUN_OPTIONS : MAX_PART_OPTIONS
-      const [g] = await tr.translate(part, { from: 'en', to: 'vi', toRegion: TO_REGION, limit, ...hint })
+      const [g] = await tr.translate(part, { from: 'en', to: target.code, toRegion: target.region, limit, ...hint })
       return {
         word: part,
         options: (g?.translations ?? []).map((t) => ({ text: t.word, gloss: cut(t.gloss), ...(t.labels.length ? { labels: t.labels } : {}) })),
@@ -115,11 +117,18 @@ function unique(ids: string[]): string[] {
 async function main() {
   const tr = createTranslator({ load: localLoad })
   console.log(LOCAL_DATA ? `Using local data from ${LOCAL_DATA}` : 'Using which-dialect data from the jsDelivr CDN')
+  const ids = process.argv.slice(2)
+  const unknown = ids.filter((id) => !TARGET_LANGUAGES.some((t) => t.id === id))
+  if (unknown.length) throw new Error(`Unknown language id: ${unknown.join(', ')} (see TARGET_LANGUAGES)`)
+  for (const target of TARGET_LANGUAGES.filter((t) => !ids.length || ids.includes(t.id))) await build(tr, target)
+}
 
+async function build(tr: Translator, target: TargetLanguage) {
+  console.log(`\n== ${target.label} (${target.id}) ==`)
   const words = []
   for (const word of TOP_100_WORDS) {
     // Every meaning, including ones with no translation (no cap: owner's request), so users can pick any.
-    const groups = await tr.translate(word, { from: 'en', to: 'vi', toRegion: TO_REGION, limit: MAX_TRANSLATIONS, allSenses: true })
+    const groups = await tr.translate(word, { from: 'en', to: target.code, toRegion: target.region, limit: MAX_TRANSLATIONS, allSenses: true })
     const meanings = groups.map((g) => ({
       id: meaningId(g.source.pos, displayGloss(g.source.glosses)),
       pos: g.source.pos,
@@ -140,7 +149,7 @@ async function main() {
     }))
     const ids = unique(meanings.map((m) => m.id))
     meanings.forEach((m, i) => (m.id = ids[i]))
-    const parts = await partsOf(tr, word)
+    const parts = await partsOf(tr, target, word)
     words.push({ word, meanings, ...(parts ? { parts } : {}) })
     const first = meanings.find((m) => m.translations.length)
     console.log(`${word.padEnd(10)} ${meanings.length} meanings; default: [${first?.pos}] ${first?.translations.map((t) => t.text).join(', ') || '—'}`)
@@ -149,7 +158,7 @@ async function main() {
 
   // The "who are you talking to?" table: one row per relationship, with the words for I, you, he/she,
   // we, plural you and they. Only what the page shows is kept.
-  const vi = createDictionary({ lang: 'vi', load: localLoad('vi') })
+  const dictionary = createDictionary({ lang: target.code, load: localLoad(target.code) })
   const cell = (c: PronounChoice) => ({
     word: c.word,
     ...(c.speaker ? { speaker: c.speaker } : {}),
@@ -157,7 +166,7 @@ async function main() {
     ...(c.inclusive !== undefined ? { inclusive: c.inclusive } : {}),
     ...(c.labels.length ? { labels: c.labels } : {}),
   })
-  const rows = await vi.pronouns({ region: TO_REGION })
+  const rows = await dictionary.pronouns({ region: target.region })
   const pronounTable = {
     source: 'which-dialect',
     // Language Helper is about casual chat, so a friend your age leads; the package's neutral default
@@ -177,15 +186,17 @@ async function main() {
     generatedBy: 'which-dialect (scripts/build-cheatsheet.ts)',
     source: 'Wiktionary, via Kaikki.org; CC BY-SA 4.0',
     from: 'en',
-    to: 'vi',
-    toRegion: TO_REGION,
-    pronounTable,
+    to: target.code,
+    ...(target.region ? { toRegion: target.region } : {}),
+    // Only languages whose pronouns depend on who you're talking to have one (Vietnamese).
+    ...(rows.length ? { pronounTable } : {}),
     words,
   }
-  await mkdir(dirname(OUT), { recursive: true })
-  await writeFile(OUT, JSON.stringify(out))
+  const file = outFile(target)
+  await mkdir(dirname(file), { recursive: true })
+  await writeFile(file, JSON.stringify(out))
   const size = JSON.stringify(out).length
-  console.log(`\nWrote ${OUT} (${(size / 1024).toFixed(0)} KB, ${words.filter((w) => w.meanings.some((m) => m.translations.length)).length}/${words.length} words translated)`)
+  console.log(`\nWrote ${file} (${(size / 1024).toFixed(0)} KB, ${words.filter((w) => w.meanings.some((m) => m.translations.length)).length}/${words.length} words translated)`)
 }
 
 main().catch((err) => {

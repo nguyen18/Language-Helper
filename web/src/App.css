@@ -1089,3 +1089,55 @@ button.pronoun-star {
     max-height: calc(100vh - 24px);
   }
 }
+
+/* Settings: the language you're learning, dialects grouped under their language */
+
+.language-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.language-group legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.language-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.language-option:hover {
+  border-color: var(--accent);
+}
+
+.language-option.picked {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.language-option input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.language-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.settings-note {
+  margin-top: 16px;
+  font-size: 0.85rem;
+}

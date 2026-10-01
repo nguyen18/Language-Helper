@@ -21,10 +21,14 @@ import {
   type Speaker,
 } from '../lib/pronounTable'
 import { toCheatsheetList, useCustomLists, type CustomEntry, type CustomList } from '../lib/customLists'
+import { targetById, useTargetLanguage } from '../lib/languages'
+import { ROUTE_HREF } from '../lib/useRoute'
 
 export function Cheatsheet() {
-  // Suspends until the list's data has loaded (App shows a loading message meanwhile).
-  const top100 = use(loadTop100())
+  // Suspends until the list's data has loaded (App shows a loading message meanwhile), including after
+  // switching languages in Settings.
+  const [target] = useTargetLanguage()
+  const top100 = use(loadTop100(target))
   const { picks, setPick } = usePicks()
   const custom = useCustomLists()
   const [creating, setCreating] = useState(false)
@@ -34,9 +38,12 @@ export function Cheatsheet() {
       <header className="header">
         <h1>Cheatsheet</h1>
         <p className="muted">Handy word lists to keep nearby while you learn.</p>
+        <p className="muted">
+          Translating to <strong>{target.label}</strong> · <a href={ROUTE_HREF.settings}>Change language</a>
+        </p>
       </header>
 
-      <ListCard list={top100} picks={picks} setPick={setPick} />
+      <ListCard key={top100.id} list={top100} picks={picks} setPick={setPick} />
 
       {custom.lists.map((list) => (
         <ListCard
@@ -57,7 +64,7 @@ export function Cheatsheet() {
       {creating ? (
         <NewListForm
           onCreate={(title) => {
-            custom.addList(title)
+            custom.addList(title, target.id)
             setCreating(false)
           }}
           onCancel={() => setCreating(false)}
@@ -622,8 +629,8 @@ function CustomListControls({ list, onAdd, onDelete }: CustomListControlsProps) 
             maxLength={60}
           />
           <input
-            aria-label="Southern Vietnamese translation"
-            lang="vi"
+            aria-label={`${targetById(list.target).label} translation`}
+            lang={targetById(list.target).code}
             value={translation}
             onChange={(e) => setTranslation(e.target.value)}
             placeholder="Translation"

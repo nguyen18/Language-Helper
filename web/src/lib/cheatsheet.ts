@@ -1,8 +1,9 @@
+import { DEFAULT_TARGET, type TargetLanguage } from './languages'
 import type { PronounTable } from './pronounTable'
 
 // Cheatsheet lists: English words, each with one or more meanings (part of speech + definition), and
 // for each meaning, translation options. The built-in list comes from which-dialect (see
-// scripts/build-cheatsheet.ts, which writes public/cheatsheet/top-100.json); custom lists come from
+// scripts/build-cheatsheet.ts, which writes public/cheatsheet/top-100.<language id>.json); custom lists come from
 // customLists.ts.
 
 export type Example = { text: string; translation?: string }
@@ -77,21 +78,28 @@ type Generated = {
   pronounTable?: PronounTable
 }
 
-// The built-in list: the owner's top 100 words (topWords.ts), with meanings and Southern Vietnamese
-// translations from which-dialect. Regenerate with `npm run cheatsheet`. The data (~1 MB) is a
-// static file fetched once, when the Cheatsheet opens, rather than part of the JavaScript bundle.
-let top100: Promise<CheatsheetList> | null = null
+// The built-in list: the owner's top 100 words (topWords.ts), with meanings and translations into the
+// language picked in Settings (languages.ts), from which-dialect. Regenerate with `npm run cheatsheet`.
+// Each language's data (~1.4 MB) is a static file fetched once, when the Cheatsheet first shows it,
+// rather than part of the JavaScript bundle.
+const top100 = new Map<string, Promise<CheatsheetList>>()
 
-export function loadTop100(): Promise<CheatsheetList> {
-  top100 ??= fetch(`${import.meta.env.BASE_URL}cheatsheet/top-100.json`)
+// The list id keys the user's picks (cheatsheetPicks.ts), so each language keeps its own. Southern
+// Vietnamese keeps the id it had before there was a choice, so picks made then still apply.
+const listId = (target: TargetLanguage) => (target.id === DEFAULT_TARGET.id ? 'top-100' : `top-100:${target.id}`)
+
+export function loadTop100(target: TargetLanguage): Promise<CheatsheetList> {
+  const cached = top100.get(target.id)
+  if (cached) return cached
+  const loading = fetch(`${import.meta.env.BASE_URL}cheatsheet/top-100.${target.id}.json`)
     .then((res) => {
       if (!res.ok) throw new Error(`Couldn't load the cheatsheet (${res.status})`)
       return res.json() as Promise<Generated>
     })
     .then((data) => ({
-      id: 'top-100',
+      id: listId(target),
       title: '100 most common words you use',
-      translationLang: { code: 'vi', label: 'Southern Vietnamese' },
+      translationLang: { code: target.code, label: target.label },
       attribution: 'Meanings and translations from Wiktionary (CC BY-SA 4.0), via which-dialect.',
       entries: data.words.map(({ word, meanings, parts }) => ({
         word,
@@ -102,8 +110,9 @@ export function loadTop100(): Promise<CheatsheetList> {
     }))
     .catch((err: unknown) => {
       // Let a later visit retry.
-      top100 = null
+      top100.delete(target.id)
       throw err
     })
-  return top100
+  top100.set(target.id, loading)
+  return loading
 }

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Discoverer } from './pages/Discoverer'
 import { Home } from './pages/Home'
+import { Settings } from './pages/Settings'
 import { ROUTE_HREF, useRoute, type Route } from './lib/useRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './App.css'
@@ -12,6 +13,7 @@ const MENU_ITEMS: { route: Route; label: string }[] = [
   { route: 'home', label: 'Home' },
   { route: 'discover', label: 'Personal Word List Discoverer' },
   { route: 'cheatsheet', label: 'Cheatsheet' },
+  { route: 'settings', label: 'Settings' },
 ]
 
 // Planned features from NOTES.md, shown in the menu so the app's direction is visible.
@@ -37,6 +39,8 @@ function App() {
             <Cheatsheet />
           </Suspense>
         </ErrorBoundary>
+      ) : route === 'settings' ? (
+        <Settings />
       ) : (
         <Home />
       )}

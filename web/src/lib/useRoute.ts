@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 
 // Hash-based routes, so refresh and the back button work without a router library or server config.
-export type Route = 'home' | 'discover' | 'cheatsheet'
+export type Route = 'home' | 'discover' | 'cheatsheet' | 'settings'
 
 export const ROUTE_HREF: Record<Route, string> = {
   home: '#/',
   discover: '#/discover',
   cheatsheet: '#/cheatsheet',
+  settings: '#/settings',
 }
 
 function readRoute(): Route {
