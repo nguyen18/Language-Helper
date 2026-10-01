@@ -457,7 +457,10 @@ type ChangeMarkProps = {
 function ChangeMark({ change, shown, onPick, target }: ChangeMarkProps) {
   const kind = kindOf(change.kind)
   const lang = target.code
-  const choosable = change.kind === 'foreign-word' || (change.options?.length ?? 0) > 1
+  const hasOptions = (change.options?.length ?? 0) > 1
+  // Every correction to a word can be looked at and changed: English words through their Cheatsheet entry,
+  // the others through the spellchecker's options and the word's own alternatives. Frame clauses can't.
+  const choosable = change.kind === 'foreign-word' || (change.kind !== 'frame' && Boolean(change.to))
   return (
     <Popover
       title={`${change.from} → ${shown}`}
@@ -486,7 +489,21 @@ function ChangeMark({ change, shown, onPick, target }: ChangeMarkProps) {
       {change.kind === 'foreign-word' ? (
         <TranslationChoices change={change} shown={shown} onPick={onPick} target={target} />
       ) : (
-        choosable && <WordOptions words={change.options!} shown={shown} reviewWord={change.to} onPick={onPick} lang={lang} />
+        choosable && (
+          <>
+            {hasOptions && (
+              <WordOptions words={change.options!} shown={shown} reviewWord={change.to} onPick={onPick} lang={lang} />
+            )}
+            <WordAlternativesBox
+              word={change.to}
+              shown={shown}
+              onPick={onPick}
+              target={target}
+              tag="Mai's pick"
+              skipAccents={hasOptions}
+            />
+          </>
+        )
       )}
     </Popover>
   )
@@ -658,7 +675,17 @@ function WordMark({ word, pick, onPick, target }: WordMarkProps) {
   )
 }
 
-function WordAlternativesBox({ word, shown, onPick, target }: Omit<WordMarkProps, 'pick'> & { shown: string }) {
+type WordAlternativesProps = Omit<WordMarkProps, 'pick'> & {
+  shown: string
+  /** How the word itself is tagged in the lists: the learner's ("your word") or Mai's correction. */
+  tag?: string
+  /** Leave out "Same letters, other accents" (a correction already lists the spellchecker's). */
+  skipAccents?: boolean
+}
+
+// A word's meaning and the words that could replace it, loaded from `word-options`: for words Mai left
+// alone, and for corrections, so "hom nay" → "hôm nay" also shows "today" and "bữa nay".
+function WordAlternativesBox({ word, shown, onPick, target, tag = 'your word', skipAccents = false }: WordAlternativesProps) {
   const [options, setOptions] = useState<WordAlternatives | null | undefined>(undefined)
 
   // Loaded the first time the box opens (the Popover renders its content only while open).
@@ -677,11 +704,13 @@ function WordAlternativesBox({ word, shown, onPick, target }: Omit<WordMarkProps
 
   const own = { ...options.word, text: word.toLowerCase() }
   const lang = target.code
-  const alternatives = options.accents.length + options.synonyms.length > 0
+  const accents = skipAccents ? [] : options.accents
+  const alternatives = accents.length + options.synonyms.length > 0
   return (
     <>
-      {/* With alternatives, the word's meanings show on its own row ("your word") in the list. */}
-      {!alternatives &&
+      {/* With alternatives, the word's meanings show on its own row in the list; with skipAccents, in the
+          correction's list above. */}
+      {!alternatives && !skipAccents &&
         (own.meanings.length ? (
           <div className="tip-meanings">
             {own.meanings.map((m, i) => (
@@ -694,26 +723,26 @@ function WordAlternativesBox({ word, shown, onPick, target }: Omit<WordMarkProps
         ) : (
           <p className="muted">No definition found for “{word}”.</p>
         ))}
-      {options.accents.length > 0 && (
+      {accents.length > 0 && (
         <>
           <p className="tip-note-label word-options-label">Same letters, other accents</p>
-          <WordOptions words={[own, ...options.accents]} shown={shown} reviewWord={own.text} tag="your word" onPick={onPick} lang={lang} />
+          <WordOptions words={[own, ...accents]} shown={shown} reviewWord={own.text} tag={tag} onPick={onPick} lang={lang} />
         </>
       )}
       {options.synonyms.length > 0 && (
         <>
           <p className="tip-note-label word-options-label">Same meaning, other words</p>
           <WordOptions
-            words={options.accents.length ? options.synonyms : [own, ...options.synonyms]}
+            words={accents.length || skipAccents ? options.synonyms : [own, ...options.synonyms]}
             shown={shown}
             reviewWord={own.text}
-            tag="your word"
+            tag={tag}
             onPick={onPick}
             lang={lang}
           />
         </>
       )}
-      {!alternatives && <p className="muted">No other words to choose from.</p>}
+      {!alternatives && !skipAccents && <p className="muted">No other words to choose from.</p>}
     </>
   )
 }
