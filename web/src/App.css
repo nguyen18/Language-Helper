@@ -1141,3 +1141,62 @@ button.pronoun-star {
   margin-top: 16px;
   font-size: 0.85rem;
 }
+
+/* "100 most common words you use": filling it with your own words (MyWordsControls) */
+
+.my-words-intro p {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.my-words-intro ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.my-words-controls textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  resize: vertical;
+}
+
+.my-words-controls .form-row {
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.my-words-found {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+.my-words-found p {
+  margin: 0;
+}
+
+.my-words-status,
+.my-words-count {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
+
+.confirm-clear {
+  font-size: 0.85rem;
+}
+
+.cheat-pending {
+  font-size: 0.85rem;
+  font-style: italic;
+}

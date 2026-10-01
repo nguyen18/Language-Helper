@@ -1,7 +1,8 @@
 import { use, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Popover } from '../components/Popover'
 import {
-  loadTop100,
+  loadBank,
+  myWordsList,
   type CheatsheetEntry,
   type CheatsheetList,
   type ContractionPart,
@@ -22,13 +23,20 @@ import {
 } from '../lib/pronounTable'
 import { toCheatsheetList, useCustomLists, type CustomEntry, type CustomList } from '../lib/customLists'
 import { targetById, useTargetLanguage } from '../lib/languages'
+import { useMyWords } from '../lib/myWords'
+import { useWordEntries } from '../lib/translateWords'
+import { MyWordsControls } from '../components/MyWordsControls'
 import { ROUTE_HREF } from '../lib/useRoute'
 
 export function Cheatsheet() {
-  // Suspends until the list's data has loaded (App shows a loading message meanwhile), including after
-  // switching languages in Settings.
+  // Suspends until the language's pre-built translations have loaded (App shows a loading message
+  // meanwhile), including after switching languages in Settings. Words not in them are translated by
+  // the backend while the page shows them as "translating…".
   const [target] = useTargetLanguage()
-  const top100 = use(loadTop100(target))
+  const bank = use(loadBank(target))
+  const myWords = useMyWords()
+  const mine = useWordEntries(target, bank, myWords.words)
+  const myList = myWordsList(target, bank, mine.entries)
   const { picks, setPick } = usePicks()
   const custom = useCustomLists()
   const [creating, setCreating] = useState(false)
@@ -43,7 +51,16 @@ export function Cheatsheet() {
         </p>
       </header>
 
-      <ListCard key={top100.id} list={top100} picks={picks} setPick={setPick} />
+      <ListCard key={myList.id} list={myList} picks={picks} setPick={setPick} onRemoveEntry={myWords.remove} emptyText="">
+        <MyWordsControls
+          words={myWords.words}
+          onAdd={myWords.add}
+          onReplace={myWords.replace}
+          translating={mine.translating}
+          failedCount={mine.failedCount}
+          onRetry={mine.retry}
+        />
+      </ListCard>
 
       {custom.lists.map((list) => (
         <ListCard
@@ -82,10 +99,12 @@ type ListCardProps = {
   list: CheatsheetList
   picks: Picks
   setPick: (key: string, value: string | null) => void
-  // Custom lists only: shows a remove button on each word.
+  // Lists the user edits: shows a remove button on each word.
   onRemoveEntry?: (word: string) => void
-  // Custom lists only: the add-word form and list actions, shown under the words.
+  // Lists the user edits: the add-word form and list actions, shown under the words.
   children?: ReactNode
+  // Shown when the list has no words ('' for none).
+  emptyText?: string
 }
 
 // One word list as a collapsible card. Built-in and custom lists share it.
@@ -100,7 +119,7 @@ type PronounProps = {
   onPickSpeaker: (speaker: Speaker | null) => void
 }
 
-function ListCard({ list, picks, setPick, onRemoveEntry, children }: ListCardProps) {
+function ListCard({ list, picks, setPick, onRemoveEntry, children, emptyText = 'No words yet. Add your first one below.' }: ListCardProps) {
   const hasMeanings = list.entries.some((e) => e.meanings.length > 1 || e.meanings[0]?.pos)
   const table = list.pronounTable
   const rowFor = (relation: 'listener' | 'about') => {
@@ -161,9 +180,9 @@ function ListCard({ list, picks, setPick, onRemoveEntry, children }: ListCardPro
           ))}
         </ol>
       ) : (
-        <p className="muted empty-list">No words yet. Add your first one below.</p>
+        emptyText && <p className="muted empty-list">{emptyText}</p>
       )}
-      {list.attribution && <p className="attribution muted">{list.attribution}</p>}
+      {list.attribution && list.entries.length > 0 && <p className="attribution muted">{list.attribution}</p>}
       {children}
     </details>
   )
@@ -230,6 +249,12 @@ function Row({ rank, entry, list, picks, setPick, pronoun, onRemove }: RowProps)
           onPickPart={(part, text, isDefault) => setPick(partKey(list.id, part), isDefault ? null : text)}
           pronoun={pronoun && (role || entry.parts?.some((p) => pronounRole(p.word))) ? { ...pronoun, role } : undefined}
         />
+      ) : entry.status === 'translating' ? (
+        <span className="cheat-trans-wrap cheat-pending muted">translating…</span>
+      ) : entry.status === 'failed' ? (
+        <span className="cheat-trans-wrap cheat-pending muted" title="Couldn’t translate this word">
+          not translated
+        </span>
       ) : (
         // Not in the dictionary at all (e.g. "going to").
         <span className="cheat-translation cheat-trans-wrap" title="Not found in the dictionary">

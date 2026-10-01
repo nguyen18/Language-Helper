@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { QUESTION_COUNT, MAI_SCRIPT } from '../lib/conversation'
 import { displayWord, tokenize, topWords } from '../lib/wordCounts'
+import { saveMyWords } from '../lib/myWords'
+import { ROUTE_HREF } from '../lib/useRoute'
 import { dictationSupported, useDictation } from '../lib/useDictation'
 
 const STORAGE_KEY = 'language-helper:chat'
@@ -232,6 +234,19 @@ function Results({
       </ol>
 
       <div className="footer-actions">
+        {fromAnswers > 0 && (
+          // Only the user's own words (not the suggested ones) become their Cheatsheet list.
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              saveMyWords(words.filter((w) => !w.suggested).map((w) => displayWord(w.word)))
+              window.location.hash = ROUTE_HREF.cheatsheet
+            }}
+          >
+            Use my words on the Cheatsheet
+          </button>
+        )}
         <button type="button" onClick={onBack}>
           Back to the chat
         </button>
