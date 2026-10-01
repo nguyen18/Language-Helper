@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import type { GrammarCheck } from './grammar'
+import type { SpellingCheck } from './spelling'
 
 // Journal entries and the user's stickers, saved in this browser's IndexedDB (photos, stickers and audio
 // are files, too big for localStorage). There are no accounts yet, so they stay on this device.
@@ -30,8 +30,8 @@ export type JournalEntry = {
   text: string
   items: SheetItem[]
   audio?: AudioNote
-  /** The latest grammar check; stale when `check.input` isn't the entry's text any more. */
-  check?: GrammarCheck
+  /** The latest spelling check; stale when `check.input` isn't the entry's text any more. */
+  check?: SpellingCheck
   createdAt: string
   updatedAt: string
 }

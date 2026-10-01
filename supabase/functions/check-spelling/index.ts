@@ -11,7 +11,7 @@
 // first), so the learner can pick another one ("khong" → không, khổng, khống; "market" → chợ, …), each with
 // its meanings from the dictionary ("muốn": verb, to want; "muộn": adj, late), so they can tell them apart.
 //
-// Called from the browser with the publishable key (web/src/lib/grammar.ts).
+// Called from the browser with the publishable key (web/src/lib/spelling.ts).
 
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'

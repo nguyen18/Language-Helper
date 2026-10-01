@@ -9,20 +9,20 @@ import {
   changeKey,
   keepCapital,
   keptWordKey,
-  checkGrammar,
+  checkSpelling,
   kindOf,
   reviewNotes,
   sentencePieces,
   shownWord,
   wordTokens,
   withAcceptedHints,
-  type GrammarCheck,
+  type SpellingCheck,
   type KeyedHint,
   type Piece,
   type WordOption,
   type ReviewChange,
   type ReviewSentence,
-} from '../lib/grammar'
+} from '../lib/spelling'
 import type { CheatsheetEntry, Meaning } from '../lib/cheatsheet'
 import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/languages'
 import { entryFor } from '../lib/translateWords'
@@ -52,7 +52,7 @@ export function Journal() {
     if (!entry.text || !backendConfigured) return
     setChecks((c) => ({ ...c, [entry.id]: 'checking' }))
     try {
-      const check = await checkGrammar(targetById(entry.targetId), entry.text, extraChecks)
+      const check = await checkSpelling(targetById(entry.targetId), entry.text, extraChecks)
       // Saved onto the entry as it is now, unless its words changed while Mai was checking.
       const latest = entriesRef.current?.find((e) => e.id === entry.id)
       if (latest && latest.text === entry.text) await save({ ...latest, check })
@@ -228,7 +228,7 @@ function EntryCard({ entry, checkState, onCheck, extraChecks, onAcceptHint, onPi
 }
 
 type CorrectionProps = {
-  check?: GrammarCheck
+  check?: SpellingCheck
   state?: 'checking' | 'failed'
   onCheck: () => void
   /** The current setting, to offer a new check when the entry was checked with the other one. */

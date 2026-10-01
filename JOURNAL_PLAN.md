@@ -78,11 +78,11 @@ FUTURE_IMPROVEMENTS.md).
 
 ## Fitting it into the current journal code
 
-The journal page in progress (branch `journal`: `JournalSheet.tsx`, `lib/journal.ts`, `lib/grammar.ts`, and the
-`check-grammar` Supabase function) runs which-dialect's checker on an entry and applies errors and warnings,
+The journal page in progress (branch `journal`: `JournalSheet.tsx`, `lib/journal.ts`, `lib/spelling.ts`, and the
+`check-spelling` Supabase function) runs which-dialect's checker on an entry and applies errors and warnings,
 with suggestions as tips. Moving to the review:
 
-- **Backend:** in `check-grammar` (or a new `review-entry` function), call
+- **Backend:** in `check-spelling` (or a new `review-entry` function), call
   `createReviewer({ baseUrl }).review(text, { lang, base: 'en', region })` instead of `checker.check(...)`,
   and return the review. It needs which-dialect **0.4.0** and Vietnamese data **0.1.4**; English data is
   unchanged (0.1.1). Update the Storage folders in `mirror-data.ts` and the `DATA` map in the function when

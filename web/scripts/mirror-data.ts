@@ -1,4 +1,4 @@
-// Copies which-dialect's dictionary data into Supabase Storage, where the `translate` and `check-grammar`
+// Copies which-dialect's dictionary data into Supabase Storage, where the `translate` and `check-spelling`
 // functions read it.
 //
 //   npm run mirror-data                  (from web/; to the local Supabase started with `npx supabase start`)
@@ -20,7 +20,7 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Each function reads its data from a folder named after the which-dialect version it imports:
-// `translate` uses 0.1.1 (en + vi 0.1.1); `check-grammar` and `sentence-frames` use 0.4.0, whose journal
+// `translate` uses 0.1.1 (en + vi 0.1.1); `check-spelling` and `sentence-frames` use 0.4.0, whose journal
 // review and sentence frames need vi 0.1.4 (checker settings, syllables, frames), and read English from
 // 0.1.1, which is unchanged, so it isn't copied twice. (Folders 0.2.0 and 0.3.0 were used before and can
 // be deleted.)

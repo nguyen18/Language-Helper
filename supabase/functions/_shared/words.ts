@@ -1,6 +1,6 @@
 // Describing words for the journal's word boxes: a word's first few meanings from the dictionary, so the
 // learner can tell suggestions apart ("muốn": verb, to want; "muộn": adjective, late). Shared by
-// check-grammar (its suggestions) and word-options (a word's alternatives).
+// check-spelling (its suggestions) and word-options (a word's alternatives).
 //
 // which-dialect is passed in (as the dictionary and posName), like _shared/entries.ts, so this file doesn't
 // pin its own copy of the package.

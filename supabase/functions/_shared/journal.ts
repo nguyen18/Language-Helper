@@ -1,4 +1,4 @@
-// Shared by the journal's functions (check-grammar, sentence-frames): the languages the site offers and
+// Shared by the journal's functions (check-spelling, sentence-frames): the languages the site offers and
 // where which-dialect's data lives in Storage.
 
 // Languages the site offers (TARGET_LANGUAGES in web/src/lib/languages.ts).

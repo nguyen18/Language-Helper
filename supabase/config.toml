@@ -425,11 +425,11 @@ entrypoint = "./functions/translate/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/translate/*.html" ]
 
-[functions.check-grammar]
+[functions.check-spelling]
 enabled = true
 verify_jwt = false
-import_map = "./functions/check-grammar/deno.json"
-entrypoint = "./functions/check-grammar/index.ts"
+import_map = "./functions/check-spelling/deno.json"
+entrypoint = "./functions/check-spelling/index.ts"
 
 [functions.sentence-frames]
 enabled = true

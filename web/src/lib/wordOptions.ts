@@ -1,5 +1,5 @@
 import { backendConfigured, callFunction } from './backend'
-import type { WordOption } from './grammar'
+import type { WordOption } from './spelling'
 import type { TargetLanguage } from './languages'
 
 // Alternatives for a word Mai left as it is, for the journal's word box, from the backend's `word-options`

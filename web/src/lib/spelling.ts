@@ -1,15 +1,15 @@
 import { callFunction } from './backend'
 import type { TargetLanguage } from './languages'
 
-// Corrections for journal entries, by the backend's `check-grammar` function
-// (supabase/functions/check-grammar), which runs which-dialect's journal review. By default it's a
+// Corrections for journal entries, by the backend's `check-spelling` function
+// (supabase/functions/check-spelling), which runs which-dialect's journal review. By default it's a
 // spellchecker: English words get the target-language word for the region, missing accents are added, and
 // English sentences or clauses that follow a sentence frame get the frame's wording. The journal's setting
 // can turn on two more checks (other regions' words, one word for "I"). Corrections are word by word, so
 // word order and grammar aren't fixed, and no change means nothing was found, not that it's certainly right.
 
 // which-dialect's ReviewChange: `to` is '' when a word is left out (Vietnamese has no "the"). `options`
-// (added by check-grammar) lists every word the checker suggested, best first, when there's more than one,
+// (added by check-spelling) lists every word the checker suggested, best first, when there's more than one,
 // each with its first few meanings from the dictionary (none for English words: the web side shows their
 // Cheatsheet entry instead).
 export type OptionMeaning = { pos: string; posName: string; gloss: string; regions?: string[]; labels?: string[] }
@@ -40,7 +40,7 @@ export type Review = {
   sentences: ReviewSentence[]
 }
 
-export type GrammarCheck = {
+export type SpellingCheck = {
   /** The text that was sent, to tell whether the entry changed since. */
   input: string
   /** Whether the extra checks (regional words, one word for "I") were on. */
@@ -54,12 +54,12 @@ export type GrammarCheck = {
   checkedAt: string
 }
 
-export async function checkGrammar(target: TargetLanguage, input: string, extraChecks: boolean): Promise<GrammarCheck> {
+export async function checkSpelling(target: TargetLanguage, input: string, extraChecks: boolean): Promise<SpellingCheck> {
   const checks = extraChecks ? { dialect: true, 'pronoun-consistency': true } : {}
   const review = await callFunction<Review>(
-    'check-grammar',
+    'check-spelling',
     { target: target.id, text: input, checks },
-    'Checking the grammar failed',
+    'Checking the spelling failed',
   )
   return { input, extraChecks, review, checkedAt: new Date().toISOString() }
 }
@@ -81,7 +81,7 @@ export const kindOf = (kind: string) => CHANGE_KINDS[kind] ?? { label: 'Correcti
  * The review with the learner's accepted hints applied: each one replaces its word in the sentence's
  * corrected text with its first suggestion and becomes a change, so it's highlighted like the others.
  */
-export function withAcceptedHints(check: GrammarCheck): Review {
+export function withAcceptedHints(check: SpellingCheck): Review {
   const accepted = new Set(check.acceptedHints ?? [])
   if (!accepted.size) return check.review
   const sentences = check.review.sentences.map((s, si) => {
