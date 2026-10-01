@@ -48,7 +48,8 @@ export type GrammarCheck = {
   review: Review
   /** Hints the learner chose to use, as `${sentence}:${hint}` indexes; applied to the corrected copy. */
   acceptedHints?: string[]
-  /** Words the learner picked instead of a change's `to`, by `changeKey`. */
+  /** Words the learner picked: instead of a change's `to` (by `changeKey`), or instead of a word Mai left
+   *  alone (by `keptWordKey`). */
   wordPicks?: Record<string, string>
   checkedAt: string
 }
@@ -165,8 +166,20 @@ export function shownWord(change: ReviewChange, pick: string | undefined): strin
   return pick === undefined ? change.to : keepCapital(change.to, pick)
 }
 
+/** A key for `wordPicks` on a word Mai left alone: its sentence and where it starts in the corrected sentence. */
+export const keptWordKey = (sentence: number, offset: number) => `${sentence}@${offset}`
+
+/** Words and the runs between them, with offsets: the words Mai left alone become hoverable. */
+export function wordTokens(text: string): { text: string; start: number; word: boolean }[] {
+  return [...text.matchAll(/[\p{L}\p{M}\p{N}'’]+|[^\p{L}\p{M}\p{N}'’]+/gu)].map((m) => ({
+    text: m[0],
+    start: m.index!,
+    word: /\p{L}/u.test(m[0]),
+  }))
+}
+
 // "Tôi" → pick "tới" shows as "Tới": a pick keeps the capital of the word it replaces.
-function keepCapital(word: string, pick: string): string {
+export function keepCapital(word: string, pick: string): string {
   const first = word.charAt(0)
   return first && first !== first.toLowerCase() ? pick.charAt(0).toUpperCase() + pick.slice(1) : pick
 }

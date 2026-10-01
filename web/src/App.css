@@ -1947,3 +1947,44 @@ button.frame-option {
 .option-meaning + .option-meaning {
   margin-top: 2px;
 }
+
+/* Words Mai left alone: quiet until hovered, then like a Cheatsheet word */
+button.tip-trigger.word-mark {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button.tip-trigger.word-mark:hover,
+button.tip-trigger.word-mark[aria-expanded='true'] {
+  background: var(--accent-soft);
+}
+
+/* A word the learner swapped for another */
+button.tip-trigger.word-mark.picked {
+  font-weight: 700;
+  background: var(--accent-soft);
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+
+.word-options-label {
+  margin-top: 10px;
+}
+
+.word-options-label + .tip-options .tip-note-label {
+  display: none;
+}
+
+/* A word box's section label sits right on its list, without the divider between box sections. */
+.tip-box > .word-options-label + .tip-options {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.tip-box > .word-options-label:first-child {
+  margin-top: 0;
+}

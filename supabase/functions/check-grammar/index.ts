@@ -17,6 +17,7 @@ import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
 import * as wd from 'which-dialect'
 import { dataUrl, TARGETS, withCors } from '../_shared/journal.ts'
+import { describeWord, type WordOption } from '../_shared/words.ts'
 
 const MAX_LENGTH = 5000
 // The opt-in checks the journal's setting can turn on; others stay off (a journal has no listener).
@@ -31,34 +32,8 @@ const dictionary = (lang: string) => {
   return dictionaries.get(lang)!
 }
 
-// How many meanings of a suggested word to show, and definitions per meaning.
-const MAX_MEANINGS = 3
-const MAX_GLOSSES = 2
-
-type OptionMeaning = { pos: string; posName: string; gloss: string; regions?: string[]; labels?: string[] }
-type Option = { text: string; meanings: OptionMeaning[] }
-
-// A suggested word with its first few meanings: part of speech, definition, and its regions and labels when
-// the dictionary tags them. A variant says what it's a form of ("Southern form of không").
-async function describe(lang: string, text: string, allRegions: number): Promise<Option> {
-  const entries = await dictionary(lang).lookup(text.toLowerCase()).catch(() => [])
-  const meanings: OptionMeaning[] = []
-  for (const entry of entries) {
-    for (const sense of entry.senses) {
-      if (meanings.length >= MAX_MEANINGS) break
-      const gloss = sense.glosses.slice(0, MAX_GLOSSES).join('; ')
-      if (!gloss) continue
-      meanings.push({
-        pos: entry.pos,
-        posName: wd.posName(entry.pos),
-        gloss,
-        ...(sense.regionTagged && sense.regions.length < allRegions ? { regions: sense.regions } : {}),
-        ...(sense.labels.length ? { labels: sense.labels } : {}),
-      })
-    }
-  }
-  return { text, meanings }
-}
+const describe = (lang: string, text: string, allRegions: number) =>
+  describeWord(dictionary(lang), wd.posName, text, allRegions)
 
 const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) => {
   const body = await req.json().catch(() => null)
@@ -83,7 +58,7 @@ const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) =>
   const unused = [...checked.issues]
   const described: Promise<void>[] = []
   for (const sentence of review.sentences) {
-    for (const change of sentence.changes as (wd.ReviewChange & { options?: Option[] })[]) {
+    for (const change of sentence.changes as (wd.ReviewChange & { options?: WordOption[] })[]) {
       const at = unused.findIndex((i) => i.rule === change.kind && i.text === change.from)
       if (at < 0) continue
       const [issue] = unused.splice(at, 1)

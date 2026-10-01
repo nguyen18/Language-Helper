@@ -7,14 +7,18 @@ import { useJournal, useJournalExtraChecks, type JournalEntry } from '../lib/jou
 import { Popover } from '../components/Popover'
 import {
   changeKey,
+  keepCapital,
+  keptWordKey,
   checkGrammar,
   kindOf,
   reviewNotes,
   sentencePieces,
   shownWord,
+  wordTokens,
   withAcceptedHints,
   type GrammarCheck,
   type KeyedHint,
+  type Piece,
   type WordOption,
   type ReviewChange,
   type ReviewSentence,
@@ -22,6 +26,7 @@ import {
 import type { CheatsheetEntry, Meaning } from '../lib/cheatsheet'
 import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/languages'
 import { entryFor } from '../lib/translateWords'
+import { loadWordOptions, type WordAlternatives } from '../lib/wordOptions'
 
 // The journal: entries written in the target language (English where the learner doesn't know a word yet),
 // latest on top. Each shows the user's own words untouched (blue), and underneath, Mai's corrected copy
@@ -337,6 +342,21 @@ type SentenceProps = {
 function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord, target }: SentenceProps) {
   const lang = target.code
   const keyOf = (c: ReviewChange) => changeKey(index, sentence.changes.indexOf(c))
+  // Each piece with where it starts in the corrected sentence, to key picks on words Mai left alone.
+  const pieces: (Piece & { start: number })[] = []
+  for (const p of sentencePieces(sentence)) {
+    const last = pieces[pieces.length - 1]
+    pieces.push({ ...p, start: last ? last.start + last.text.length : 0 })
+  }
+  // The learner's own picks on words Mai left alone, for the notes ("nay → này").
+  const ownPicks = Object.entries(picks)
+    .filter(([key]) => key.startsWith(`${index}@`))
+    .map(([key, pick]) => {
+      const offset = Number(key.slice(key.indexOf('@') + 1))
+      const word = wordTokens(sentence.corrected.slice(offset))[0]?.text ?? ''
+      return { word, pick: keepCapital(word, pick) }
+    })
+    .filter((p) => p.word && p.word.toLowerCase() !== p.pick.toLowerCase())
   const changed = sentence.changes.length > 0
   const groups = new Map<string, ReviewChange[]>()
   for (const c of sentence.changes) groups.set(kindOf(c.kind).label, [...(groups.get(kindOf(c.kind).label) ?? []), c])
@@ -347,7 +367,7 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
         <span className="sentence-mark" aria-hidden="true">
           {changed ? '✓' : '·'}
         </span>
-        {sentencePieces(sentence).map((p, i) =>
+        {pieces.map((p, i) =>
           p.change ? (
             <ChangeMark
               key={i}
@@ -357,12 +377,36 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
               target={target}
             />
           ) : (
-            <span key={i}>{p.text}</span>
+            // Words Mai left alone: hover for their meaning, other accents and other words.
+            wordTokens(p.text).map((t) => {
+              if (!t.word) return <span key={`${i}-${t.start}`}>{t.text}</span>
+              const key = keptWordKey(index, p.start + t.start)
+              return (
+                <WordMark
+                  key={`${i}-${t.start}`}
+                  word={t.text}
+                  pick={picks[key]}
+                  onPick={(word) => onPickWord(key, word)}
+                  target={target}
+                />
+              )
+            })
           ),
         )}
       </p>
-      {(groups.size > 0 || hints.length > 0 || sentence.unchecked.length > 0) && (
+      {(groups.size > 0 || hints.length > 0 || sentence.unchecked.length > 0 || ownPicks.length > 0) && (
         <ul className="journal-notes">
+          {ownPicks.length > 0 && (
+            <li>
+              {ownPicks.map((p, i) => (
+                <span key={i}>
+                  {i > 0 && ' · '}
+                  <s lang={lang}>{p.word}</s> → <strong lang={lang}>{p.pick}</strong>
+                </span>
+              ))}{' '}
+              <span className="muted">(your {ownPicks.length === 1 ? 'pick' : 'picks'})</span>
+            </li>
+          )}
           {[...groups].map(([label, list]) => (
             <li key={label}>
               {list.map((c, i) => (
@@ -450,15 +494,16 @@ type Choice = WordOption | { text: string; gloss?: string; regions?: string[]; l
 type WordOptionsProps = {
   words: Choice[]
   shown: string
-  /** The review's own choice, marked "Mai's pick". */
+  /** The review's own choice (or the learner's own word), tagged with `tag`. */
   reviewWord: string
+  tag?: string
   onPick: (word: string) => void
   lang: string
 }
 
 // Words to star, like the Cheatsheet's translation box, each with what it means so the learner can tell
 // them apart ("muốn" to want, "muộn" late, "mượn" to borrow).
-function WordOptions({ words, shown, reviewWord, onPick, lang }: WordOptionsProps) {
+function WordOptions({ words, shown, reviewWord, tag = "Mai's pick", onPick, lang }: WordOptionsProps) {
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
   return (
     <div className="tip-options" role="group" aria-label="Words to choose from">
@@ -501,7 +546,7 @@ function WordOptions({ words, shown, reviewWord, onPick, lang }: WordOptionsProp
                     </>
                   )}
                 </span>
-                {same(option.text, reviewWord) && <span className="default-tag">Mai's pick</span>}
+                {same(option.text, reviewWord) && <span className="default-tag">{tag}</span>}
               </button>
             </li>
           )
@@ -581,6 +626,90 @@ function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkPr
           </ul>
         </details>
       )}
+    </>
+  )
+}
+
+type WordMarkProps = { word: string; pick?: string; onPick: (word: string) => void; target: TargetLanguage }
+
+// A word Mai left as it is. Hover (or tap) for a box like the Cheatsheet's: what it means, the same letters
+// with other accents (a real word with the wrong tone passes the spellchecker), and other words with the
+// same meaning, to star another one. A pick shows in place of the word, tinted.
+function WordMark({ word, pick, onPick, target }: WordMarkProps) {
+  const shown = pick === undefined ? word : keepCapital(word, pick)
+  const changed = shown.toLowerCase() !== word.toLowerCase()
+  return (
+    <Popover
+      title={shown}
+      trigger={shown}
+      triggerClassName={changed ? 'word-mark picked' : 'word-mark'}
+      triggerLabel={`${shown}: see what it means and other words`}
+      wrapClassName="word-wrap"
+      lang={target.code}
+      align="start"
+      contentKey={shown}
+    >
+      <WordAlternativesBox word={word} shown={shown} onPick={onPick} target={target} />
+    </Popover>
+  )
+}
+
+function WordAlternativesBox({ word, shown, onPick, target }: Omit<WordMarkProps, 'pick'> & { shown: string }) {
+  const [options, setOptions] = useState<WordAlternatives | null | undefined>(undefined)
+
+  // Loaded the first time the box opens (the Popover renders its content only while open).
+  useEffect(() => {
+    let cancelled = false
+    loadWordOptions(target, word)
+      .then((o) => !cancelled && setOptions(o))
+      .catch(() => !cancelled && setOptions(null))
+    return () => {
+      cancelled = true
+    }
+  }, [target, word])
+
+  if (options === undefined) return <p className="muted">Looking up “{word}”…</p>
+  if (options === null) return <p className="muted">Couldn't look up “{word}”.</p>
+
+  const own = { ...options.word, text: word.toLowerCase() }
+  const lang = target.code
+  const alternatives = options.accents.length + options.synonyms.length > 0
+  return (
+    <>
+      {/* With alternatives, the word's meanings show on its own row ("your word") in the list. */}
+      {!alternatives &&
+        (own.meanings.length ? (
+          <div className="tip-meanings">
+            {own.meanings.map((m, i) => (
+              <p key={i} className="tip-meaning">
+                <span className="pos-name">{m.posName}</span> {m.gloss}
+                {m.regions?.length ? <span className="region-badge"> {m.regions.join(', ')}</span> : null}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">No definition found for “{word}”.</p>
+        ))}
+      {options.accents.length > 0 && (
+        <>
+          <p className="tip-note-label word-options-label">Same letters, other accents</p>
+          <WordOptions words={[own, ...options.accents]} shown={shown} reviewWord={own.text} tag="your word" onPick={onPick} lang={lang} />
+        </>
+      )}
+      {options.synonyms.length > 0 && (
+        <>
+          <p className="tip-note-label word-options-label">Same meaning, other words</p>
+          <WordOptions
+            words={options.accents.length ? options.synonyms : [own, ...options.synonyms]}
+            shown={shown}
+            reviewWord={own.text}
+            tag="your word"
+            onPick={onPick}
+            lang={lang}
+          />
+        </>
+      )}
+      {!alternatives && <p className="muted">No other words to choose from.</p>}
     </>
   )
 }
