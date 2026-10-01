@@ -1,5 +1,7 @@
 # Journal: corrections and sentence frames (plan)
 
+**Built 2026-10-01** on branch `journal` (which-dialect 0.4.0, vi data 0.1.4); see ARCHITECTURE.md's Journal page section for what the code does. Differences from this plan: the extra checks are one Settings toggle ("Regional words and pronouns"); frames are inserted from a frames browser in the editor (the entry's own frames panel lists them); changed words are placed by matching each change's `to` in the corrected sentence.
+
 How the journal's review could look, and how which-dialect does the work. Written 2026-10-01 alongside
 which-dialect's journal review (`createReviewer`), spellchecker (`createChecker`) and sentence frames
 (`createPhrasebook`); updated the same day for which-dialect 0.4.0, where the checker became a

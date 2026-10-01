@@ -430,3 +430,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/check-grammar/deno.json"
 entrypoint = "./functions/check-grammar/index.ts"
+
+[functions.sentence-frames]
+enabled = true
+verify_jwt = false
+import_map = "./functions/sentence-frames/deno.json"
+entrypoint = "./functions/sentence-frames/index.ts"

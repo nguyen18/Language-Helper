@@ -1,3 +1,4 @@
+import { useJournalExtraChecks } from '../lib/journal'
 import { TARGET_LANGUAGES, useTargetLanguage, type TargetLanguage } from '../lib/languages'
 
 // Dialects grouped under their language ("Vietnamese": Southern, Central, Northern).
@@ -8,6 +9,7 @@ const BY_LANGUAGE = TARGET_LANGUAGES.reduce<Map<string, TargetLanguage[]>>(
 
 export function Settings() {
   const [target, setTarget] = useTargetLanguage()
+  const [extraChecks, setExtraChecks] = useJournalExtraChecks()
 
   return (
     <main className="app">
@@ -47,6 +49,25 @@ export function Settings() {
           </a>{' '}
           adds them. Your custom word lists keep the language they were made in.
         </p>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Journal corrections</h2>
+        </div>
+        <p className="muted">
+          Mai always adds missing accents and swaps English words for {target.label} ones. She can also check:
+        </p>
+        <label className="setting-toggle">
+          <input type="checkbox" checked={extraChecks} onChange={(e) => setExtraChecks(e.target.checked)} />
+          <span>
+            <strong>Regional words and pronouns</strong>
+            <span className="muted">
+              Words from another dialect (e.g. Northern “lợn” → Southern “heo”), and keeping one word for “I” (“tôi”
+              earlier, “tui” later).
+            </span>
+          </span>
+        </label>
       </section>
     </main>
   )

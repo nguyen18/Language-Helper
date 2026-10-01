@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { GrammarCheck } from './grammar'
 
 // Journal entries and the user's stickers, saved in this browser's IndexedDB (photos, stickers and audio
@@ -171,4 +171,41 @@ export function objectUrl(blob: Blob): string {
     objectUrls.set(blob, url)
   }
   return url
+}
+
+// The journal's extra checks (other regions' words, one word for "I"), off by default: the review is a
+// spellchecker unless the learner turns them on in Settings. Shared by every page, in sync across tabs.
+const EXTRA_CHECKS_KEY = 'language-helper:journal-extra-checks'
+const EXTRA_CHECKS_EVENT = 'language-helper:journal-extra-checks-change'
+// Used when localStorage is unavailable: the choice then lasts until the page reloads.
+let unsavedExtraChecks = false
+
+function readExtraChecks(): boolean {
+  try {
+    const saved = localStorage.getItem(EXTRA_CHECKS_KEY)
+    return saved === null ? unsavedExtraChecks : saved === 'true'
+  } catch {
+    return unsavedExtraChecks
+  }
+}
+
+export function useJournalExtraChecks(): [boolean, (on: boolean) => void] {
+  const on = useSyncExternalStore((onChange) => {
+    window.addEventListener('storage', onChange)
+    window.addEventListener(EXTRA_CHECKS_EVENT, onChange)
+    return () => {
+      window.removeEventListener('storage', onChange)
+      window.removeEventListener(EXTRA_CHECKS_EVENT, onChange)
+    }
+  }, readExtraChecks)
+  const set = (value: boolean) => {
+    unsavedExtraChecks = value
+    try {
+      localStorage.setItem(EXTRA_CHECKS_KEY, String(value))
+    } catch {
+      // Kept in memory instead.
+    }
+    window.dispatchEvent(new Event(EXTRA_CHECKS_EVENT))
+  }
+  return [on, set]
 }

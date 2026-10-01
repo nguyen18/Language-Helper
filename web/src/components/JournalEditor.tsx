@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { newId, nowLocal, objectUrl, useStickers, type JournalEntry, type SheetItem, type Sticker } from '../lib/journal'
+import { firstSlot, type Frame } from '../lib/frames'
 import { shrinkImage } from '../lib/images'
 import type { TargetLanguage } from '../lib/languages'
 import { AudioNoteRecorder } from './AudioNoteRecorder'
+import { FramesBrowser } from './FramesBrowser'
 import { JournalSheet } from './JournalSheet'
 import { StickerMaker } from './StickerMaker'
 
@@ -50,6 +52,33 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
   const { stickers, add: addSticker, remove: removeSticker } = useStickers()
   const photoRef = useRef<HTMLInputElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
+  const [showFrames, setShowFrames] = useState(false)
+  // Where to put the cursor after a frame is inserted (its first slot, selected).
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const box = sheetRef.current?.querySelector('textarea')
+    const sel = pendingSelection.current
+    if (!box || !sel) return
+    pendingSelection.current = null
+    box.focus()
+    box.setSelectionRange(sel.start, sel.end)
+  }, [text])
+
+  // A frame's pattern goes in at the cursor (or the end), after a space when needed.
+  const insertFrame = (frame: Frame) => {
+    const box = sheetRef.current?.querySelector('textarea')
+    const start = box?.selectionStart ?? text.length
+    const end = box?.selectionEnd ?? text.length
+    const before = text.slice(0, start)
+    const gap = before && !/\s$/.test(before) ? ' ' : ''
+    const at = start + gap.length
+    const slot = firstSlot(frame.text)
+    pendingSelection.current = slot
+      ? { start: at + slot.start, end: at + slot.end }
+      : { start: at + frame.text.length, end: at + frame.text.length }
+    setText(before + gap + frame.text + text.slice(end))
+  }
 
   const addItem = (kind: SheetItem['kind'], image: Blob, aspect: number) => {
     const w = kind === 'photo' ? 0.42 : 0.26
@@ -121,7 +150,7 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
     <section className="card journal-editor" aria-label={entry ? 'Edit entry' : 'New entry'}>
       <div className="card-head">
         <h2>{entry ? 'Edit entry' : 'New entry'}</h2>
-        <span className="language-tag">{target.label} only</span>
+        <span className="language-tag">{target.label}</span>
       </div>
 
       <label className="form-label" htmlFor="journal-when">
@@ -143,7 +172,7 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
           onItemsChange={setItems}
           lang={target.code}
           label={`Your entry, in ${target.label}`}
-          placeholder={`Write your entry in ${target.label} only…`}
+          placeholder={`Write your entry in ${target.label}. Stuck on a word? Write it in English…`}
         />
       </div>
 
@@ -164,7 +193,17 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
         <button type="button" onClick={() => setMakingSticker(true)}>
           ✂️ Make a sticker
         </button>
+        <button type="button" aria-expanded={showFrames} onClick={() => setShowFrames((v) => !v)}>
+          💡 Sentence frames
+        </button>
       </div>
+
+      {showFrames && (
+        <section className="journal-frames-panel" aria-label="Sentence frames">
+          <p className="muted">Tap a frame to put it in your entry, then type over the part in {'{braces}'}.</p>
+          <FramesBrowser target={target} onPick={insertFrame} />
+        </section>
+      )}
 
       <div className="sticker-tray" aria-label="Your stickers">
         {stickers.length ? (
