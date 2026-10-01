@@ -51,7 +51,14 @@ function db(): Promise<IDBDatabase> {
       req.result.createObjectStore(ENTRIES, { keyPath: 'id' })
       req.result.createObjectStore(STICKERS, { keyPath: 'id' })
     }
-    req.onsuccess = () => resolve(req.result)
+    req.onsuccess = () => {
+      // Let go when another tab upgrades or deletes the database, instead of blocking it.
+      req.result.onversionchange = () => {
+        req.result.close()
+        dbPromise = null
+      }
+      resolve(req.result)
+    }
     req.onerror = () => {
       dbPromise = null
       reject(req.error)

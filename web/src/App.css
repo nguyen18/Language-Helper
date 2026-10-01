@@ -1672,3 +1672,24 @@ button.chip.danger {
   touch-action: none;
   cursor: crosshair;
 }
+
+/* Sentence frames the entry follows, for reusing the patterns. */
+.diary-frames {
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.diary-frames summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.diary-frames ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.diary-frames li span:first-child {
+  font-weight: 600;
+}

@@ -4,7 +4,7 @@ import { DiaryEditor } from '../components/DiaryEditor'
 import { DiarySheet } from '../components/DiarySheet'
 import { backendConfigured } from '../lib/backend'
 import { useDiary, type DiaryEntry } from '../lib/diary'
-import { checkGrammar, correctedPieces, grammarTips, type GrammarCheck } from '../lib/grammar'
+import { checkGrammar, correctedPieces, reviewNotes, type GrammarCheck } from '../lib/grammar'
 import { targetById, useTargetLanguage } from '../lib/languages'
 
 // The diary: entries written in the target language only, latest on top. Each shows the user's own
@@ -134,7 +134,8 @@ type CardProps = {
 function EntryCard({ entry, checkState, onCheck, onEdit, onDelete }: CardProps) {
   const [confirming, setConfirming] = useState(false)
   const lang = targetById(entry.targetId)
-  const check = entry.check?.input === entry.text ? entry.check : undefined
+  // A check from before the entry was last edited (or in an older format) doesn't count.
+  const check = entry.check?.input === entry.text && entry.check.review ? entry.check : undefined
 
   return (
     <li className="card diary-entry">
@@ -200,43 +201,53 @@ function Correction({ check, state, onCheck, lang }: CorrectionProps) {
     )
   }
 
-  const pieces = correctedPieces(check)
-  const fixes = pieces.filter((p) => p.fix)
-  const tips = grammarTips(check)
+  const pieces = correctedPieces(check.review)
+  const { changes, hints, frames, unchecked } = reviewNotes(check.review)
 
   return (
     <section className="diary-correction" aria-label="Mai's corrections">
       <p className="diary-correction-label">
-        {fixes.length ? `Corrected by Mai · ${fixes.length} ${fixes.length === 1 ? 'change' : 'changes'}` : 'Checked by Mai'}
+        {changes.length ? `Corrected by Mai · ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}` : 'Checked by Mai'}
       </p>
-      {fixes.length ? (
+      {changes.length ? (
         <p className="diary-corrected" lang={lang}>
-          {pieces.map((p, i) =>
-            p.fix ? (
-              <mark key={i} title={`${p.fix.from} → ${p.text}: ${p.fix.issue.message}`}>
-                {p.text}
-              </mark>
-            ) : (
-              p.text
-            ),
-          )}
+          {pieces.map((p, i) => (p.changed ? <mark key={i}>{p.text}</mark> : p.text))}
         </p>
       ) : (
         <p className="muted">Nothing to correct. (Mai only points out what she's sure about.)</p>
       )}
-      {fixes.length + tips.length > 0 && (
+      {changes.length + hints.length + unchecked.length > 0 && (
         <ul className="diary-notes">
-          {fixes.map((p, i) => (
-            <li key={`fix-${i}`}>
-              <s>{p.fix!.from}</s> → <strong>{p.text}</strong>: {p.fix!.issue.message}
+          {changes.map((c, i) => (
+            <li key={`change-${i}`}>
+              {c.from ? <s lang={lang}>{c.from}</s> : 'Add'} → <strong lang={lang}>{c.to}</strong>: {c.why}
             </li>
           ))}
-          {tips.map((t, i) => (
-            <li key={`tip-${i}`} className="diary-tip">
-              Tip: {t.message}
+          {hints.map((h, i) => (
+            <li key={`hint-${i}`} className="diary-tip">
+              Tip: {h.message}
+            </li>
+          ))}
+          {unchecked.map((u, i) => (
+            <li key={`unchecked-${i}`} className="diary-tip">
+              Mai couldn't check “{u}”. Try writing it in the language you're learning.
             </li>
           ))}
         </ul>
+      )}
+      {frames.length > 0 && (
+        <details className="diary-frames">
+          <summary>
+            Sentence patterns you used ({frames.length})
+          </summary>
+          <ul>
+            {frames.map((f) => (
+              <li key={f.id}>
+                <span lang={lang}>{f.text}</span> <span className="muted">· {f.en}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </section>
   )

@@ -20,12 +20,13 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Each function reads its data from a folder named after the which-dialect version it imports:
-// `translate` uses 0.1.1 (en + vi 0.1.1); `check-grammar` uses 0.2.0, whose grammar checker needs vi 0.1.2
-// (checker settings and syllables), and reads English from 0.1.1, which is unchanged, so it isn't copied twice.
+// `translate` uses 0.1.1 (en + vi 0.1.1); `check-grammar` uses 0.3.0, whose journal review needs vi 0.1.3
+// (checker settings, syllables and sentence frames), and reads English from 0.1.1, which is unchanged, so it
+// isn't copied twice.
 const DATA_SETS: { folder: string; lang: string; version: string }[] = [
   { folder: '0.1.1', lang: 'en', version: '0.1.1' },
   { folder: '0.1.1', lang: 'vi', version: '0.1.1' },
-  { folder: '0.2.0', lang: 'vi', version: '0.1.2' },
+  { folder: '0.3.0', lang: 'vi', version: '0.1.3' },
 ]
 const BUCKET = 'which-dialect'
 const PARALLEL = 24
