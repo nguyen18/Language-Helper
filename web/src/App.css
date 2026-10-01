@@ -1894,3 +1894,47 @@ button.frame-option {
   line-height: 1.5;
   white-space: normal;
 }
+
+/* A changed word with other words to choose from */
+.choice-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 2px;
+  vertical-align: super;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.change-why + .tip-options,
+.change-why + .meaning-chips {
+  margin-top: 10px;
+}
+
+.meaning-chips + .tip-options {
+  margin-top: 8px;
+}
+
+.change-why + .tip-meaning {
+  margin-top: 10px;
+}
+
+.other-meanings {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.other-meanings summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.other-meanings ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AudioNotePlayer } from '../components/AudioNoteRecorder'
 import { JournalEditor } from '../components/JournalEditor'
 import { JournalSheet } from '../components/JournalSheet'
@@ -6,17 +6,21 @@ import { backendConfigured } from '../lib/backend'
 import { useJournal, useJournalExtraChecks, type JournalEntry } from '../lib/journal'
 import { Popover } from '../components/Popover'
 import {
+  changeKey,
   checkGrammar,
   kindOf,
   reviewNotes,
   sentencePieces,
+  shownWord,
   withAcceptedHints,
   type GrammarCheck,
   type KeyedHint,
   type ReviewChange,
   type ReviewSentence,
 } from '../lib/grammar'
-import { targetById, useTargetLanguage } from '../lib/languages'
+import type { CheatsheetEntry, Meaning } from '../lib/cheatsheet'
+import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/languages'
+import { entryFor } from '../lib/translateWords'
 
 // The journal: entries written in the target language (English where the learner doesn't know a word yet),
 // latest on top. Each shows the user's own words untouched (blue), and underneath, Mai's corrected copy
@@ -119,6 +123,9 @@ export function Journal() {
                   entry.check &&
                   save({ ...entry, check: { ...entry.check, acceptedHints: [...(entry.check.acceptedHints ?? []), key] } })
                 }
+                onPickWord={(key, word) =>
+                  entry.check && save({ ...entry, check: { ...entry.check, wordPicks: { ...entry.check.wordPicks, [key]: word } } })
+                }
                 onEdit={() => {
                   setEditing({ entry })
                   window.scrollTo(0, 0)
@@ -148,11 +155,12 @@ type CardProps = {
   onCheck: () => void
   extraChecks: boolean
   onAcceptHint: (key: string) => void
+  onPickWord: (key: string, word: string) => void
   onEdit: () => void
   onDelete: () => void
 }
 
-function EntryCard({ entry, checkState, onCheck, extraChecks, onAcceptHint, onEdit, onDelete }: CardProps) {
+function EntryCard({ entry, checkState, onCheck, extraChecks, onAcceptHint, onPickWord, onEdit, onDelete }: CardProps) {
   const [confirming, setConfirming] = useState(false)
   const lang = targetById(entry.targetId)
   // A check from before the entry was last edited (or in an older format) doesn't count.
@@ -180,8 +188,8 @@ function EntryCard({ entry, checkState, onCheck, extraChecks, onAcceptHint, onEd
           onCheck={onCheck}
           extraChecks={extraChecks}
           onAcceptHint={onAcceptHint}
-          lang={lang.code}
-          languageLabel={lang.label}
+          onPickWord={onPickWord}
+          target={lang}
         />
       ) : (
         <p className="journal-nudge">
@@ -220,11 +228,12 @@ type CorrectionProps = {
   /** The current setting, to offer a new check when the entry was checked with the other one. */
   extraChecks: boolean
   onAcceptHint: (key: string) => void
-  lang: string
-  languageLabel: string
+  onPickWord: (key: string, word: string) => void
+  target: TargetLanguage
 }
 
-function Correction({ check, state, onCheck, extraChecks, onAcceptHint, lang, languageLabel }: CorrectionProps) {
+function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWord, target }: CorrectionProps) {
+  const lang = target.code
   if (!backendConfigured) {
     return <p className="muted journal-check-status">Corrections aren't set up on this site yet.</p>
   }
@@ -274,11 +283,13 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, lang, la
           {review.sentences.map((s, si) => (
             <SentenceView
               key={si}
+              index={si}
               sentence={s}
               hints={hintsIn(si)}
+              picks={check.wordPicks ?? {}}
               onAcceptHint={onAcceptHint}
-              lang={lang}
-              languageLabel={languageLabel}
+              onPickWord={onPickWord}
+              target={target}
             />
           ))}
         </ol>
@@ -311,16 +322,20 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, lang, la
 }
 
 type SentenceProps = {
+  index: number
   sentence: ReviewSentence
   hints: KeyedHint[]
+  picks: Record<string, string>
   onAcceptHint: (key: string) => void
-  lang: string
-  languageLabel: string
+  onPickWord: (key: string, word: string) => void
+  target: TargetLanguage
 }
 
 // One corrected sentence, changed words highlighted by kind (tap one for why), and under it the changes
 // grouped by kind ("Toi → Tôi · muon → muốn (Accents and spelling)"), tips and words Mai couldn't correct.
-function SentenceView({ sentence, hints, onAcceptHint, lang, languageLabel }: SentenceProps) {
+function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord, target }: SentenceProps) {
+  const lang = target.code
+  const keyOf = (c: ReviewChange) => changeKey(index, sentence.changes.indexOf(c))
   const changed = sentence.changes.length > 0
   const groups = new Map<string, ReviewChange[]>()
   for (const c of sentence.changes) groups.set(kindOf(c.kind).label, [...(groups.get(kindOf(c.kind).label) ?? []), c])
@@ -332,7 +347,17 @@ function SentenceView({ sentence, hints, onAcceptHint, lang, languageLabel }: Se
           {changed ? '✓' : '·'}
         </span>
         {sentencePieces(sentence).map((p, i) =>
-          p.change ? <ChangeMark key={i} change={p.change} text={p.text} lang={lang} /> : <span key={i}>{p.text}</span>,
+          p.change ? (
+            <ChangeMark
+              key={i}
+              change={p.change}
+              shown={shownWord(p.change, picks[keyOf(p.change)])}
+              onPick={(word) => onPickWord(keyOf(p.change!), word)}
+              target={target}
+            />
+          ) : (
+            <span key={i}>{p.text}</span>
+          ),
         )}
       </p>
       {(groups.size > 0 || hints.length > 0 || sentence.unchecked.length > 0) && (
@@ -342,7 +367,8 @@ function SentenceView({ sentence, hints, onAcceptHint, lang, languageLabel }: Se
               {list.map((c, i) => (
                 <span key={i}>
                   {i > 0 && ' · '}
-                  <s lang={lang}>{c.from}</s> → {c.to ? <strong lang={lang}>{c.to}</strong> : <em>left out</em>}
+                  <s lang={lang}>{c.from}</s> →{' '}
+                  {c.to ? <strong lang={lang}>{shownWord(c, picks[keyOf(c)])}</strong> : <em>left out</em>}
                 </span>
               ))}{' '}
               <span className="muted">({label})</span>
@@ -358,7 +384,7 @@ function SentenceView({ sentence, hints, onAcceptHint, lang, languageLabel }: Se
           ))}
           {sentence.unchecked.map((u, i) => (
             <li key={`u-${i}`} className="journal-tip">
-              Couldn't correct “{u}”: no {languageLabel} word found, so it's left as written.
+              Couldn't correct “{u}”: no {target.label} word found, so it's left as written.
             </li>
           ))}
         </ul>
@@ -367,27 +393,172 @@ function SentenceView({ sentence, hints, onAcceptHint, lang, languageLabel }: Se
   )
 }
 
-function ChangeMark({ change, text, lang }: { change: ReviewChange; text: string; lang: string }) {
+type ChangeMarkProps = {
+  change: ReviewChange
+  /** The word shown: the learner's pick, or the review's. */
+  shown: string
+  onPick: (word: string) => void
+  target: TargetLanguage
+}
+
+// A changed word in the corrected copy. Hover (or tap) opens a box like the Cheatsheet's: why it changed,
+// and the other words it could be, to star the one that fits. English words Mai translated show every
+// meaning of the English word with its translations (the meaning holding Mai's word first, since that's
+// the one the sentence uses); other changes show the checker's alternatives ("khong": không, khổng, khống).
+function ChangeMark({ change, shown, onPick, target }: ChangeMarkProps) {
   const kind = kindOf(change.kind)
+  const lang = target.code
+  const choosable = change.kind === 'foreign-word' || (change.options?.length ?? 0) > 1
   return (
     <Popover
-      title={`${change.from} → ${change.to}`}
-      trigger={text}
+      title={`${change.from} → ${shown}`}
+      trigger={
+        <>
+          {shown}
+          {choosable && <span className="choice-dot" aria-hidden="true" />}
+        </>
+      }
       triggerClassName="change-mark"
-      triggerLabel={`${text}, changed from “${change.from}”: ${kind.label}`}
+      triggerLabel={`${shown}, changed from “${change.from}”: ${kind.label}${choosable ? '. Other words to choose from' : ''}`}
       wrapClassName={`change-wrap kind-${kind.color}`}
       lang={lang}
       align="start"
+      contentKey={shown}
     >
       <p className="change-why">
         <span className="change-kind" data-kind={kind.color}>
           {kind.label}
         </span>
         <span>
-          <s lang={lang}>{change.from}</s> → <strong lang={lang}>{change.to}</strong>
+          <s lang={lang}>{change.from}</s> → <strong lang={lang}>{shown}</strong>
         </span>
         <span>{change.why}</span>
       </p>
+      {change.kind === 'foreign-word' ? (
+        <TranslationChoices change={change} shown={shown} onPick={onPick} target={target} />
+      ) : (
+        choosable && <WordOptions words={change.options!} shown={shown} reviewWord={change.to} onPick={onPick} lang={lang} />
+      )}
     </Popover>
+  )
+}
+
+type WordOptionsProps = {
+  words: { text: string; gloss?: string; regions?: string[]; labels?: string[] }[] | string[]
+  shown: string
+  /** The review's own choice, marked "Mai's pick". */
+  reviewWord: string
+  onPick: (word: string) => void
+  lang: string
+}
+
+// Words to star, like the Cheatsheet's translation box.
+function WordOptions({ words, shown, reviewWord, onPick, lang }: WordOptionsProps) {
+  const list = words.map((w) => (typeof w === 'string' ? { text: w } : w))
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+  return (
+    <div className="tip-options" role="group" aria-label="Words to choose from">
+      <p className="tip-note-label">Star the one that fits</p>
+      <ul>
+        {list.map((option) => {
+          const isPicked = same(option.text, shown)
+          return (
+            <li key={option.text}>
+              <button
+                type="button"
+                className={isPicked ? 'tip-option picked' : 'tip-option'}
+                aria-pressed={isPicked}
+                onClick={() => onPick(option.text)}
+              >
+                <span className="star" aria-hidden="true">
+                  {isPicked ? '★' : '☆'}
+                </span>
+                <span className="tip-option-text" lang={lang}>
+                  {option.text}
+                </span>
+                <span className="tip-option-usage">
+                  {'gloss' in option && option.gloss}
+                  {'regions' in option && option.regions?.length ? (
+                    <span className="region-badge"> {option.regions.join(', ')}</span>
+                  ) : null}
+                  {'labels' in option && option.labels?.length ? (
+                    <span className="label-chips"> {option.labels.join(', ')}</span>
+                  ) : null}
+                </span>
+                {same(option.text, reviewWord) && <span className="default-tag">Mai's pick</span>}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+// An English word's meanings, each with its translations (the Cheatsheet's data, from the backend).
+function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkProps, 'change'> & { change: ReviewChange }) {
+  const [entry, setEntry] = useState<CheatsheetEntry | null | undefined>(undefined)
+  const [meaningId, setMeaningId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    entryFor(target, change.from.toLowerCase())
+      .then((e) => !cancelled && setEntry(e))
+      .catch(() => !cancelled && setEntry(null))
+    return () => {
+      cancelled = true
+    }
+  }, [target, change.from])
+
+  // No meanings to show: the checker's words, if it had more than one.
+  const fallback =
+    (change.options?.length ?? 0) > 1 ? (
+      <WordOptions words={change.options!} shown={shown} reviewWord={change.to} onPick={onPick} lang={target.code} />
+    ) : null
+  if (entry === undefined) return <p className="muted">Looking up “{change.from}”…</p>
+  const meanings = entry?.meanings.filter((m) => m.options.length > 0) ?? []
+  if (!meanings.length) return fallback
+
+  // The meaning the sentence uses: the one holding the shown word, else the one holding Mai's word.
+  const holds = (m: Meaning, w: string) => m.options.some((o) => o.text.toLowerCase() === w.toLowerCase())
+  const meaning =
+    meanings.find((m) => m.id === meaningId) ??
+    meanings.find((m) => holds(m, shown)) ??
+    meanings.find((m) => holds(m, change.to)) ??
+    meanings[0]
+
+  const others = meanings.filter((m) => m.id !== meaning.id)
+  return (
+    <>
+      <p className="tip-meaning">
+        <span className="pos-name">{meaning.posName ?? meaning.pos}</span> {meaning.gloss}
+      </p>
+      <WordOptions words={meaning.options} shown={shown} reviewWord={change.to} onPick={onPick} lang={target.code} />
+      {others.length > 0 && (
+        <details className="other-meanings">
+          <summary>
+            Other meanings of “{change.from}” ({others.length})
+          </summary>
+          <ul className="tip-options" aria-label={`Other meanings of “${change.from}”`}>
+            {others.map((m) => (
+              <li key={m.id}>
+                <button type="button" className="tip-option meaning-option" onClick={() => setMeaningId(m.id)}>
+                  <span className="pos-name">{m.posName ?? m.pos}</span>
+                  <span className="tip-option-usage">
+                    <span className="meaning-gloss">{m.gloss}</span>
+                    <span className="meaning-example" lang={target.code}>
+                      {m.options
+                        .slice(0, 3)
+                        .map((o) => o.text)
+                        .join(', ')}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   )
 }

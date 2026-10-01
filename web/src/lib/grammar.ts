@@ -8,8 +8,9 @@ import type { TargetLanguage } from './languages'
 // can turn on two more checks (other regions' words, one word for "I"). Corrections are word by word, so
 // word order and grammar aren't fixed, and no change means nothing was found, not that it's certainly right.
 
-// which-dialect's ReviewChange: `to` is '' when a word is left out (Vietnamese has no "the").
-export type ReviewChange = { from: string; to: string; why: string; kind: string }
+// which-dialect's ReviewChange: `to` is '' when a word is left out (Vietnamese has no "the"). `options`
+// (added by check-grammar) lists every word the checker suggested, best first, when there's more than one.
+export type ReviewChange = { from: string; to: string; why: string; kind: string; options?: string[] }
 export type ReviewHint = { rule: string; text: string; message: string; suggestions: string[] }
 export type ReviewFrame = { id: string; en: string; text: string }
 
@@ -43,6 +44,8 @@ export type GrammarCheck = {
   review: Review
   /** Hints the learner chose to use, as `${sentence}:${hint}` indexes; applied to the corrected copy. */
   acceptedHints?: string[]
+  /** Words the learner picked instead of a change's `to`, by `changeKey`. */
+  wordPicks?: Record<string, string>
   checkedAt: string
 }
 
@@ -148,4 +151,18 @@ export function reviewNotes(review: Review) {
     frames: [...frames.values()],
     unchecked: review.sentences.flatMap((s) => s.unchecked),
   }
+}
+
+/** A change's key for `wordPicks`: its sentence and its place in that sentence's changes. */
+export const changeKey = (sentence: number, change: number) => `${sentence}:${change}`
+
+/** The word to show for a change: the learner's pick (keeping a capital, like the review's), or its `to`. */
+export function shownWord(change: ReviewChange, pick: string | undefined): string {
+  return pick === undefined ? change.to : keepCapital(change.to, pick)
+}
+
+// "Tôi" → pick "tới" shows as "Tới": a pick keeps the capital of the word it replaces.
+function keepCapital(word: string, pick: string): string {
+  const first = word.charAt(0)
+  return first && first !== first.toLowerCase() ? pick.charAt(0).toUpperCase() + pick.slice(1) : pick
 }

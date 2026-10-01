@@ -85,3 +85,13 @@ export function useWordEntries(target: TargetLanguage, bank: WordBank, words: st
     },
   }
 }
+
+/**
+ * One English word's entry (every meaning and its translations), from this visit's fetches or the backend.
+ * Used by the journal to offer other translations of a word Mai translated. null without the backend.
+ */
+export async function entryFor(target: TargetLanguage, word: string): Promise<CheatsheetEntry | null> {
+  if (!backendConfigured) return null
+  if (!fetched.has(cacheKey(target, word))) await fetchChunk(target, [word])
+  return fetched.get(cacheKey(target, word)) ?? null
+}
