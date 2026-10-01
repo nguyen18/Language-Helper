@@ -11,7 +11,6 @@ const Cheatsheet = lazy(() => import('./pages/Cheatsheet').then((m) => ({ defaul
 
 const MENU_ITEMS: { route: Route; label: string }[] = [
   { route: 'home', label: 'Home' },
-  { route: 'discover', label: 'Personal Word List Discoverer' },
   { route: 'cheatsheet', label: 'Cheatsheet' },
   { route: 'settings', label: 'Settings' },
 ]

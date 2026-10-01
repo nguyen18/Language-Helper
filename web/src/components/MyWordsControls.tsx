@@ -201,6 +201,14 @@ export function MyWordsControls({ words, onAdd, onReplace, translating, failedCo
           {words.length} of {MAX_MY_WORDS} words
         </p>
       )}
+      {/* The Discoverer's way in from the Cheatsheet (owner's request 2026-10-01: here, not in the menu). */}
+      <a className="discover-link" href={ROUTE_HREF.discover}>
+        <span>
+          <strong>Personal Word List Discoverer</strong>
+          <span className="muted"> Chat with Mai and she’ll find your most common words.</span>
+        </span>
+        <span aria-hidden="true">→</span>
+      </a>
     </div>
   )
 }
