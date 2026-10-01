@@ -4,6 +4,7 @@ import { displayWord, tokenize, topWords } from '../lib/wordCounts'
 import { saveMyWords } from '../lib/myWords'
 import { ROUTE_HREF } from '../lib/useRoute'
 import { dictationSupported, useDictation } from '../lib/useDictation'
+import maiAvatar from '../assets/mai-placeholder.png'
 
 const STORAGE_KEY = 'language-helper:chat'
 const FILLER_CHIPS = ['um', 'uh']
@@ -108,9 +109,12 @@ export function Discoverer() {
       <section className="messages">
         {maiLines.map((line, i) => (
           <div key={i} className="turn">
-            <div className="bubble mai">
-              <span className="speaker">Mai</span>
-              {line}
+            <div className="mai-row">
+              <img className="mai-avatar" src={maiAvatar} alt="" />
+              <div className="bubble mai">
+                <span className="speaker">Mai</span>
+                {line}
+              </div>
             </div>
             {replies[i] !== undefined && <div className="bubble user">{replies[i]}</div>}
           </div>

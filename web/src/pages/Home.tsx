@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { STUDY_PLAN } from '../lib/studyPlan'
 import { ROUTE_HREF } from '../lib/useRoute'
+import maiAvatar from '../assets/mai-placeholder.png'
 
 const STORAGE_KEY = 'language-helper:study-plan'
 
@@ -33,6 +34,7 @@ export function Home() {
   return (
     <main className="app">
       <header className="header">
+        <img className="mai-avatar large" src={maiAvatar} alt="" />
         <h1>Hi, I'm Mai!</h1>
         <p className="muted">
           I'll help you learn a new language by starting with the way you already talk.

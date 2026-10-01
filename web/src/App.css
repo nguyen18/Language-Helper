@@ -180,6 +180,27 @@ button.mic.listening {
   border-bottom-left-radius: 4px;
 }
 
+/* Mai's avatar: a temporary stand-in drawing until her real art is ready */
+.mai-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.mai-avatar.large {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 8px;
+}
+
+.mai-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .bubble.user {
   align-self: flex-end;
   background: var(--accent);
