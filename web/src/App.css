@@ -1172,7 +1172,20 @@ button.pronoun-star {
 .my-words-controls .form-row {
   flex-wrap: wrap;
   align-items: center;
-  margin-top: 8px;
+}
+
+/* Empty list: the box on its own line (3 rows), buttons under it. */
+.my-words-input textarea {
+  flex: 1 1 100%;
+}
+
+/* With words: box and buttons on one row (the box wraps above the buttons on narrow screens). */
+.add-word-form.compact .my-words-input textarea {
+  flex: 1 1 200px;
+  min-width: 0;
+  height: 38px;
+  padding: 7px 10px;
+  resize: none;
 }
 
 .my-words-found {
@@ -1187,13 +1200,16 @@ button.pronoun-star {
 }
 
 .my-words-status,
-.my-words-count {
-  margin: 8px 0 0;
-  font-size: 0.85rem;
+.my-words-meta {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
 }
 
-.confirm-clear {
-  font-size: 0.85rem;
+.my-words-controls .my-words-meta .link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
 }
 
 .cheat-pending {
@@ -1207,10 +1223,11 @@ a.discover-link {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 16px;
-  padding: 12px 14px;
+  margin-top: 10px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   color: var(--text);
   text-decoration: none;
   background: var(--accent-soft);
@@ -1220,6 +1237,7 @@ a.discover-link:hover {
   border-color: var(--accent);
 }
 
-a.discover-link .muted {
-  font-size: 0.9rem;
+.custom-controls.my-words-controls {
+  margin-top: 12px;
+  padding-top: 12px;
 }

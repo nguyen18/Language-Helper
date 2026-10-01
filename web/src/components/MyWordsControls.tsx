@@ -136,26 +136,28 @@ export function MyWordsControls({ words, onAdd, onReplace, translating, failedCo
           </div>
         </div>
       ) : (
-        <form className="add-word-form" onSubmit={submit} aria-label="Add your words">
+        // Compact once the list has words: the box and buttons share one row, and the count and "Clear list"
+        // a small line under it (owner's feedback 2026-10-01: the section took up too much space).
+        <form className={empty ? 'add-word-form' : 'add-word-form compact'} onSubmit={submit} aria-label="Add your words">
           <label htmlFor={`${id}-words`} className="sr-only">
             English words or text
           </label>
-          <textarea
-            id={`${id}-words`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              // Enter adds; Shift+Enter starts a new line (for pasting or typing a list).
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                e.currentTarget.form?.requestSubmit()
-              }
-            }}
-            placeholder={empty ? 'I, you, like, so, yeah… or paste some of your writing' : 'Add a word, or paste more'}
-            rows={empty ? 3 : 1}
-            autoCapitalize="off"
-          />
-          <div className="form-row">
+          <div className="form-row my-words-input">
+            <textarea
+              id={`${id}-words`}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter adds; Shift+Enter starts a new line (for pasting or typing a list).
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  e.currentTarget.form?.requestSubmit()
+                }
+              }}
+              placeholder={empty ? 'I, you, like, so, yeah… or paste some of your writing' : 'Add a word, or paste more'}
+              rows={empty ? 3 : 1}
+              autoCapitalize="off"
+            />
             <button type="submit" className="primary" disabled={!text.trim()}>
               Add
             </button>
@@ -169,43 +171,41 @@ export function MyWordsControls({ words, onAdd, onReplace, translating, failedCo
               hidden
               onChange={(e) => void upload(e.target.files?.[0])}
             />
-            {!empty &&
-              (confirmingClear ? (
-                <span className="confirm-clear">
-                  Clear all {words.length} words?{' '}
-                  <button
-                    type="button"
-                    className="link danger-link"
-                    onClick={() => {
-                      onReplace([])
-                      setConfirmingClear(false)
-                    }}
-                  >
-                    Clear
-                  </button>{' '}
-                  <button type="button" className="link" onClick={() => setConfirmingClear(false)}>
-                    Keep
-                  </button>
-                </span>
-              ) : (
-                <button type="button" className="link danger-link" onClick={() => setConfirmingClear(true)}>
-                  Clear list
-                </button>
-              ))}
           </div>
         </form>
       )}
       {message && <p className="muted my-words-status">{message}</p>}
       {!empty && (
-        <p className="muted my-words-count">
-          {words.length} of {MAX_MY_WORDS} words
+        <p className="muted my-words-meta">
+          {words.length} of {MAX_MY_WORDS} words ·{' '}
+          {confirmingClear ? (
+            <>
+              Clear all {words.length} words?{' '}
+              <button
+                type="button"
+                className="link danger-link"
+                onClick={() => {
+                  onReplace([])
+                  setConfirmingClear(false)
+                }}
+              >
+                Clear
+              </button>{' '}
+              <button type="button" className="link" onClick={() => setConfirmingClear(false)}>
+                Keep
+              </button>
+            </>
+          ) : (
+            <button type="button" className="link danger-link" onClick={() => setConfirmingClear(true)}>
+              Clear list
+            </button>
+          )}
         </p>
       )}
       {/* The Discoverer's way in from the Cheatsheet (owner's request 2026-10-01: here, not in the menu). */}
       <a className="discover-link" href={ROUTE_HREF.discover}>
         <span>
-          <strong>Personal Word List Discoverer</strong>
-          <span className="muted"> Chat with Mai and she’ll find your most common words.</span>
+          Find your words by chatting with Mai: <strong>Personal Word List Discoverer</strong>
         </span>
         <span aria-hidden="true">→</span>
       </a>
