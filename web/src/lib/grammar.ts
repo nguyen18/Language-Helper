@@ -9,8 +9,12 @@ import type { TargetLanguage } from './languages'
 // word order and grammar aren't fixed, and no change means nothing was found, not that it's certainly right.
 
 // which-dialect's ReviewChange: `to` is '' when a word is left out (Vietnamese has no "the"). `options`
-// (added by check-grammar) lists every word the checker suggested, best first, when there's more than one.
-export type ReviewChange = { from: string; to: string; why: string; kind: string; options?: string[] }
+// (added by check-grammar) lists every word the checker suggested, best first, when there's more than one,
+// each with its first few meanings from the dictionary (none for English words: the web side shows their
+// Cheatsheet entry instead).
+export type OptionMeaning = { pos: string; posName: string; gloss: string; regions?: string[]; labels?: string[] }
+export type WordOption = { text: string; meanings: OptionMeaning[] }
+export type ReviewChange = { from: string; to: string; why: string; kind: string; options?: WordOption[] }
 export type ReviewHint = { rule: string; text: string; message: string; suggestions: string[] }
 export type ReviewFrame = { id: string; en: string; text: string }
 

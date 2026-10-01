@@ -8,7 +8,8 @@
 // ../_shared/journal.ts).
 //
 // Each change also gets `options`: every word the checker suggested, best first (the review keeps only the
-// first), so the learner can pick another one ("khong" → không, khổng, khống; "market" → chợ, …).
+// first), so the learner can pick another one ("khong" → không, khổng, khống; "market" → chợ, …), each with
+// its meanings from the dictionary ("muốn": verb, to want; "muộn": adj, late), so they can tell them apart.
 //
 // Called from the browser with the publishable key (web/src/lib/grammar.ts).
 
@@ -24,6 +25,40 @@ const OPTIONAL_CHECKS = ['dialect', 'pronoun-consistency'] as const
 // Kept between requests while the function stays warm, so data files already loaded are reused.
 const reviewer = wd.createReviewer({ baseUrl: dataUrl })
 const checker = wd.createChecker({ baseUrl: dataUrl })
+const dictionaries = new Map<string, wd.Dictionary>()
+const dictionary = (lang: string) => {
+  if (!dictionaries.has(lang)) dictionaries.set(lang, wd.createDictionary({ lang, baseUrl: dataUrl(lang) }))
+  return dictionaries.get(lang)!
+}
+
+// How many meanings of a suggested word to show, and definitions per meaning.
+const MAX_MEANINGS = 3
+const MAX_GLOSSES = 2
+
+type OptionMeaning = { pos: string; posName: string; gloss: string; regions?: string[]; labels?: string[] }
+type Option = { text: string; meanings: OptionMeaning[] }
+
+// A suggested word with its first few meanings: part of speech, definition, and its regions and labels when
+// the dictionary tags them. A variant says what it's a form of ("Southern form of không").
+async function describe(lang: string, text: string, allRegions: number): Promise<Option> {
+  const entries = await dictionary(lang).lookup(text.toLowerCase()).catch(() => [])
+  const meanings: OptionMeaning[] = []
+  for (const entry of entries) {
+    for (const sense of entry.senses) {
+      if (meanings.length >= MAX_MEANINGS) break
+      const gloss = sense.glosses.slice(0, MAX_GLOSSES).join('; ')
+      if (!gloss) continue
+      meanings.push({
+        pos: entry.pos,
+        posName: wd.posName(entry.pos),
+        gloss,
+        ...(sense.regionTagged && sense.regions.length < allRegions ? { regions: sense.regions } : {}),
+        ...(sense.labels.length ? { labels: sense.labels } : {}),
+      })
+    }
+  }
+  return { text, meanings }
+}
 
 const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) => {
   const body = await req.json().catch(() => null)
@@ -44,15 +79,22 @@ const handler = withSupabase({ auth: ['publishable', 'secret'] }, async (req) =>
   ])
   // A change's options are the suggestions of the checker issue with the same rule and words, taken in
   // order so a word written twice matches each issue once. Frame changes have none.
+  const allRegions = (await dictionary(target.code).meta()).regions.length
   const unused = [...checked.issues]
+  const described: Promise<void>[] = []
   for (const sentence of review.sentences) {
-    for (const change of sentence.changes as (wd.ReviewChange & { options?: string[] })[]) {
+    for (const change of sentence.changes as (wd.ReviewChange & { options?: Option[] })[]) {
       const at = unused.findIndex((i) => i.rule === change.kind && i.text === change.from)
       if (at < 0) continue
       const [issue] = unused.splice(at, 1)
-      if (issue.suggestions.length > 1) change.options = issue.suggestions
+      const words = issue.suggestions.filter(Boolean)
+      if (words.length < 2) continue
+      // English words' meanings come from the translate function on the web side (the Cheatsheet's data).
+      if (change.kind === 'foreign-word') change.options = words.map((text) => ({ text, meanings: [] }))
+      else described.push(Promise.all(words.map((w) => describe(target.code, w, allRegions))).then((o) => void (change.options = o)))
     }
   }
+  await Promise.all(described)
   return Response.json(review)
 })
 

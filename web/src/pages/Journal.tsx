@@ -15,6 +15,7 @@ import {
   withAcceptedHints,
   type GrammarCheck,
   type KeyedHint,
+  type WordOption,
   type ReviewChange,
   type ReviewSentence,
 } from '../lib/grammar'
@@ -443,8 +444,11 @@ function ChangeMark({ change, shown, onPick, target }: ChangeMarkProps) {
   )
 }
 
+// A word to choose: the checker's suggestion with its meanings, or a Cheatsheet translation with its gloss.
+type Choice = WordOption | { text: string; gloss?: string; regions?: string[]; labels?: string[] }
+
 type WordOptionsProps = {
-  words: { text: string; gloss?: string; regions?: string[]; labels?: string[] }[] | string[]
+  words: Choice[]
   shown: string
   /** The review's own choice, marked "Mai's pick". */
   reviewWord: string
@@ -452,15 +456,15 @@ type WordOptionsProps = {
   lang: string
 }
 
-// Words to star, like the Cheatsheet's translation box.
+// Words to star, like the Cheatsheet's translation box, each with what it means so the learner can tell
+// them apart ("muốn" to want, "muộn" late, "mượn" to borrow).
 function WordOptions({ words, shown, reviewWord, onPick, lang }: WordOptionsProps) {
-  const list = words.map((w) => (typeof w === 'string' ? { text: w } : w))
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
   return (
     <div className="tip-options" role="group" aria-label="Words to choose from">
       <p className="tip-note-label">Star the one that fits</p>
       <ul>
-        {list.map((option) => {
+        {words.map((option) => {
           const isPicked = same(option.text, shown)
           return (
             <li key={option.text}>
@@ -477,13 +481,25 @@ function WordOptions({ words, shown, reviewWord, onPick, lang }: WordOptionsProp
                   {option.text}
                 </span>
                 <span className="tip-option-usage">
-                  {'gloss' in option && option.gloss}
-                  {'regions' in option && option.regions?.length ? (
-                    <span className="region-badge"> {option.regions.join(', ')}</span>
-                  ) : null}
-                  {'labels' in option && option.labels?.length ? (
-                    <span className="label-chips"> {option.labels.join(', ')}</span>
-                  ) : null}
+                  {'meanings' in option ? (
+                    option.meanings.length ? (
+                      option.meanings.map((m, mi) => (
+                        <span key={mi} className="option-meaning">
+                          <span className="pos-name">{m.posName}</span> {m.gloss}
+                          {m.regions?.length ? <span className="region-badge"> {m.regions.join(', ')}</span> : null}
+                          {m.labels?.length ? <span className="label-chips"> {m.labels.join(', ')}</span> : null}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="muted">No definition found</span>
+                    )
+                  ) : (
+                    <>
+                      {option.gloss}
+                      {option.regions?.length ? <span className="region-badge"> {option.regions.join(', ')}</span> : null}
+                      {option.labels?.length ? <span className="label-chips"> {option.labels.join(', ')}</span> : null}
+                    </>
+                  )}
                 </span>
                 {same(option.text, reviewWord) && <span className="default-tag">Mai's pick</span>}
               </button>
@@ -513,7 +529,13 @@ function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkPr
   // No meanings to show: the checker's words, if it had more than one.
   const fallback =
     (change.options?.length ?? 0) > 1 ? (
-      <WordOptions words={change.options!} shown={shown} reviewWord={change.to} onPick={onPick} lang={target.code} />
+      <WordOptions
+        words={change.options!.map((o) => ({ text: o.text }))}
+        shown={shown}
+        reviewWord={change.to}
+        onPick={onPick}
+        lang={target.code}
+      />
     ) : null
   if (entry === undefined) return <p className="muted">Looking up “{change.from}”…</p>
   const meanings = entry?.meanings.filter((m) => m.options.length > 0) ?? []

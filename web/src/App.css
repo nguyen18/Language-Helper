@@ -1938,3 +1938,12 @@ button.frame-option {
   max-height: 240px;
   overflow-y: auto;
 }
+
+/* A suggested word's meanings, one per line, under the word */
+.option-meaning {
+  display: block;
+}
+
+.option-meaning + .option-meaning {
+  margin-top: 2px;
+}
