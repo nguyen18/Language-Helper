@@ -33,12 +33,14 @@ export function Home() {
 
   return (
     <main className="app">
-      <header className="header">
+      <header className="header mai-greeting">
         <img className="mai-avatar large" src={maiAvatar} alt="" />
-        <h1>Hi, I'm Mai!</h1>
-        <p className="muted">
-          I'll help you learn a new language by starting with the way you already talk.
-        </p>
+        <div className="bubble mai">
+          <h1>Hi, I'm Mai!</h1>
+          <p className="muted">
+            I'll help you learn a new language by starting with the way you already talk.
+          </p>
+        </div>
       </header>
 
       <section className="card">
