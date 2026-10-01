@@ -1241,3 +1241,8 @@ a.discover-link:hover {
   margin-top: 12px;
   padding-top: 12px;
 }
+
+.my-words-full {
+  flex: 1 1 200px;
+  font-size: 0.85rem;
+}

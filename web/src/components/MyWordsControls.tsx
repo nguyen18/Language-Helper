@@ -25,6 +25,9 @@ export function MyWordsControls({ words, onAdd, onReplace, translating, failedCo
   const [confirmingClear, setConfirmingClear] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const empty = words.length === 0
+  // A full list hides the box for typing words (owner's request 2026-10-01); uploading stays, since a
+  // file can replace the list.
+  const full = words.length >= MAX_MY_WORDS
 
   const offer = (found: string[], source: string) => {
     setMessage(null)
@@ -139,28 +142,36 @@ export function MyWordsControls({ words, onAdd, onReplace, translating, failedCo
         // Compact once the list has words: the box and buttons share one row, and the count and "Clear list"
         // a small line under it (owner's feedback 2026-10-01: the section took up too much space).
         <form className={empty ? 'add-word-form' : 'add-word-form compact'} onSubmit={submit} aria-label="Add your words">
-          <label htmlFor={`${id}-words`} className="sr-only">
-            English words or text
-          </label>
+          {!full && (
+            <label htmlFor={`${id}-words`} className="sr-only">
+              English words or text
+            </label>
+          )}
           <div className="form-row my-words-input">
-            <textarea
-              id={`${id}-words`}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                // Enter adds; Shift+Enter starts a new line (for pasting or typing a list).
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  e.currentTarget.form?.requestSubmit()
-                }
-              }}
-              placeholder={empty ? 'I, you, like, so, yeah… or paste some of your writing' : 'Add a word, or paste more'}
-              rows={empty ? 3 : 1}
-              autoCapitalize="off"
-            />
-            <button type="submit" className="primary" disabled={!text.trim()}>
-              Add
-            </button>
+            {full ? (
+              <span className="muted my-words-full">Your list is full. Remove a word (✕) to add another.</span>
+            ) : (
+              <>
+                <textarea
+                  id={`${id}-words`}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter adds; Shift+Enter starts a new line (for pasting or typing a list).
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      e.currentTarget.form?.requestSubmit()
+                    }
+                  }}
+                  placeholder={empty ? 'I, you, like, so, yeah… or paste some of your writing' : 'Add a word, or paste more'}
+                  rows={empty ? 3 : 1}
+                  autoCapitalize="off"
+                />
+                <button type="submit" className="primary" disabled={!text.trim()}>
+                  Add
+                </button>
+              </>
+            )}
             <button type="button" onClick={() => fileRef.current?.click()}>
               Upload a file
             </button>
