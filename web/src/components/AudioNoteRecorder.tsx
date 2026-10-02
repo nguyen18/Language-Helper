@@ -8,8 +8,10 @@ const recordingSupported = typeof window !== 'undefined' && 'MediaRecorder' in w
 
 const formatSeconds = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-export function AudioNotePlayer({ audio }: { audio: AudioNote }) {
+/** The note's player; `bare` leaves out its "🎙 Audio note · 0:03" title (a saved entry shows just the bar). */
+export function AudioNotePlayer({ audio, bare = false }: { audio: AudioNote; bare?: boolean }) {
   const url = objectUrl(audio.blob)
+  if (bare) return <audio className="audio-bar" controls src={url} preload="metadata" aria-label="Audio note" />
   return (
     <div className="audio-note">
       <span className="muted">🎙 Audio note · {formatSeconds(audio.seconds)}</span>

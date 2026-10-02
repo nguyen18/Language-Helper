@@ -2850,3 +2850,18 @@ ruby.fix {
 .journal-text.annotated .fix-new {
   font-size: 0.8em;
 }
+
+/* An entry's audio note: just the player bar, in the bottom row beside ✎ and 🗑. */
+.entry-tools.with-audio {
+  left: 8px;
+}
+
+.entry-tools .audio-bar {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+}
+
+.entry-paper:has(.entry-tools.with-audio) {
+  padding-bottom: 44px;
+}

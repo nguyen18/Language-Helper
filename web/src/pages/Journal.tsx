@@ -212,8 +212,9 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
 
       {/* One sheet of paper: the learner's page, then Mai's notes written at the bottom of it. */}
       <div className={check ? 'entry-paper annotated' : 'entry-paper'}>
-        {/* Edit and delete, laid over the page's bottom-right corner, in the blank paper under the text. */}
-        <div className="entry-tools">
+        {/* The audio note's bar, then edit and delete, along the bottom of the page under the text. */}
+        <div className={entry.audio ? 'entry-tools with-audio' : 'entry-tools'}>
+          {entry.audio && !confirming && <AudioNotePlayer audio={entry.audio} bare />}
           {confirming ? (
             <span className="journal-confirm">
               Delete?{' '}
@@ -243,7 +244,6 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
             richText={check && <AnnotatedText check={check} onPickWord={onPickWord} target={lang} />}
           />
         )}
-        {entry.audio && <AudioNotePlayer audio={entry.audio} />}
 
         {entry.text ? (
           <Correction
