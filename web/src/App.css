@@ -2878,6 +2878,8 @@ div.audio-bar {
 .entry-tools div.audio-bar {
   flex: 1;
   height: auto;
+  /* A little room before ✎, so the bar's end doesn't crowd the buttons. */
+  margin-right: 10px;
 }
 
 .audio-play {
