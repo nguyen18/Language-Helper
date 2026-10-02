@@ -35,16 +35,18 @@ type Props = {
   apiRef?: RefObject<SheetApi | null>
   /** Read-only: the text as rendered with Mai's corrections written over it, in place of plain `text`. */
   richText?: ReactNode
+  /** Space the text keeps clear in the top-right corner, for buttons laid over the page. */
+  corner?: { width: number; height: number }
 }
 
-export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, captionPlaceholder, lang, label, apiRef, richText }: Props) {
+export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, captionPlaceholder, lang, label, apiRef, richText, corner }: Props) {
   const editable = Boolean(onTextChange && onItemsChange)
   const sheetRef = useRef<HTMLDivElement>(null)
   const [sheet, setSheet] = useState<HTMLDivElement | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const width = useWidth(sheet)
   const outlineOf = useOutlines(items)
-  const floats = wrapFloats(items, width, outlineOf, (i) => Boolean(i.caption) || (editable && i.id === selected))
+  const floats = wrapFloats(items, width, outlineOf, (i) => Boolean(i.caption) || (editable && i.id === selected), corner)
   // The latest items, for drags: a drag's pointer handlers outlive the render that started it.
   const itemsRef = useRef(items)
   useLayoutEffect(() => {

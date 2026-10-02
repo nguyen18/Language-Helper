@@ -87,10 +87,16 @@ export function wrapFloats(
   width: number,
   outlineOf: (item: SheetItem) => Outline | undefined,
   withCaption: (item: SheetItem) => boolean,
+  /** Space kept clear in the page's top-right corner (the entry's ✎ and 🗑 buttons sit there). */
+  corner?: { width: number; height: number },
 ): WrapFloat[] {
   if (!width) return []
   const floats: WrapFloat[] = []
   const bottom = { left: 0, right: 0 }
+  if (corner) {
+    floats.push({ key: 'corner', side: 'right', width: corner.width, height: corner.height })
+    bottom.right = corner.height
+  }
   let lastTop = 0
   const sorted = [...items].sort((a, b) => a.y - b.y)
   for (const item of sorted) {

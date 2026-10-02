@@ -184,6 +184,9 @@ export function Journal() {
   )
 }
 
+// The space the ✎ and 🗑 buttons take in the page's top-right corner (two 30px buttons, a gap and margins).
+const ENTRY_TOOLS_SPACE = { width: 82, height: 42 }
+
 type CardProps = {
   entry: JournalEntry
   /** The language being learned now: an entry in another one says which. */
@@ -212,12 +215,36 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
 
       {/* One sheet of paper: the learner's page, then Mai's notes written at the bottom of it. */}
       <div className={check ? 'entry-paper annotated' : 'entry-paper'}>
+        {/* Edit and delete, laid over the page's top-right corner (the text keeps clear of them). */}
+        <div className="entry-tools">
+          {confirming ? (
+            <span className="journal-confirm">
+              Delete?{' '}
+              <button type="button" className="chip danger" onClick={onDelete}>
+                Delete
+              </button>{' '}
+              <button type="button" className="chip" onClick={() => setConfirming(false)}>
+                Keep
+              </button>
+            </span>
+          ) : (
+            <>
+              <button type="button" className="icon-button small" aria-label="Edit entry" title="Edit" onClick={onEdit}>
+                ✎
+              </button>
+              <button type="button" className="icon-button small" aria-label="Delete entry" title="Delete" onClick={() => setConfirming(true)}>
+                🗑
+              </button>
+            </>
+          )}
+        </div>
         {(entry.text || entry.items.length > 0) && (
           <JournalSheet
             text={entry.text}
             items={entry.items}
             lang={lang.code}
             richText={check && <AnnotatedText check={check} onPickWord={onPickWord} target={lang} />}
+            corner={ENTRY_TOOLS_SPACE}
           />
         )}
         {entry.audio && <AudioNotePlayer audio={entry.audio} />}
@@ -237,26 +264,6 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
         )}
       </div>
 
-      <div className="journal-entry-actions">
-        <button type="button" className="chip" onClick={onEdit}>
-          Edit
-        </button>
-        {confirming ? (
-          <span className="journal-confirm">
-            Delete this entry?{' '}
-            <button type="button" className="chip danger" onClick={onDelete}>
-              Delete
-            </button>{' '}
-            <button type="button" className="chip" onClick={() => setConfirming(false)}>
-              Keep
-            </button>
-          </span>
-        ) : (
-          <button type="button" className="chip" onClick={() => setConfirming(true)}>
-            Delete
-          </button>
-        )}
-      </div>
     </li>
   )
 }

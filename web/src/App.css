@@ -2784,3 +2784,29 @@ ruby.fix {
 .nowrap {
   white-space: nowrap;
 }
+
+/* An entry's ✎ and 🗑, laid over the top-right corner of its page */
+.entry-paper {
+  position: relative;
+}
+
+.entry-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.entry-tools .journal-confirm {
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+}
+
+.entry-tools .icon-button.small {
+  font-size: 0.95rem;
+}
