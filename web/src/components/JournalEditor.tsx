@@ -191,7 +191,7 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
           {panel === 'stickers' && (
             <>
               <button type="button" className="make-sticker" onClick={() => setMakingSticker(true)}>
-                ✂️ Cut a sticker out of a photo
+                ✂️ Make a sticker
               </button>
               <div className="sticker-tray" aria-label="Your stickers">
                 {stickers.length ? (

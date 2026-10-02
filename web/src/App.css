@@ -2560,3 +2560,32 @@ button.make-sticker {
   color: var(--muted);
   pointer-events: none;
 }
+
+/* The sticker maker's three ways in */
+.sticker-ways {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+button.sticker-way {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px;
+  text-align: left;
+  border: 1.5px solid var(--text);
+  border-radius: 0;
+}
+
+.sticker-way-icon {
+  grid-row: 1 / 3;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.sticker-way .muted {
+  font-size: 0.85rem;
+}

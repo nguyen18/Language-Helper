@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { cutOutSticker, loadImage, shrinkImage, type Point } from '../lib/images'
 
-// Makes a sticker from a photo: trace around the part you want with a finger or the mouse and it's cut
-// out with a white border, like iPhone stickers. A picture that's already cut out (a PNG with a
-// see-through background, e.g. an iPhone sticker saved to Photos) can be used whole.
+// Makes a sticker, three ways (owner's request 2026-10-01: trace, or the iPhone's own cut-out):
+// - paste an iPhone cut-out: in Photos, touch and hold the subject until it lifts, Copy, then tap here; the
+//   clipboard's picture (see-through background and all) becomes the sticker (Clipboard API, which asks
+//   with a Paste bubble; needs https). Pasting onto the page itself works too (JournalEditor);
+// - trace it: pick a photo and draw around the part you want; it's cut out with a white border;
+// - use a picture that's already cut out (a PNG with a see-through background) as it is.
 
 // Traced points closer together than this (in screen pixels) are skipped.
 const MIN_GAP = 3
 // Phone photos are huge; tracing works on a copy this size (stickers come out at most 800 px anyway).
 const WORKING_SIZE = 1200
+
+// When the page can't read the clipboard (the browser said no, or has no Clipboard API).
+const PASTE_ON_PAGE =
+  "This browser didn't let the page read the clipboard. Close this, then touch and hold the journal page and tap Paste: the cut-out becomes a sticker."
 
 type Props = {
   onDone: (sticker: { blob: Blob; aspect: number }) => void
@@ -24,15 +31,13 @@ export function StickerMaker({ onDone, onCancel }: Props) {
   const [error, setError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const wholeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onCancel])
-
-  // Ask for a picture as soon as it opens.
-  useEffect(() => fileRef.current?.click(), [])
 
   // The canvas is sized once per picture (resizing it on every stroke is slow).
   useEffect(() => {
@@ -126,6 +131,35 @@ export function StickerMaker({ onDone, onCancel }: Props) {
     }
   }
 
+  // A picture used as it is: pasted from the clipboard or picked, kept as PNG for its see-through background.
+  const keepWhole = async (picture: Blob) => {
+    setBusy(true)
+    try {
+      onDone(await shrinkImage(picture, 800, 'image/png'))
+    } catch (err) {
+      setError((err as Error).message)
+      setBusy(false)
+    }
+  }
+
+  const pasteCutOut = async () => {
+    setError(null)
+    const readClipboard = navigator.clipboard?.read?.bind(navigator.clipboard)
+    if (!readClipboard) {
+      setError(PASTE_ON_PAGE)
+      return
+    }
+    try {
+      for (const item of await readClipboard()) {
+        const type = item.types.find((t) => t.startsWith('image/'))
+        if (type) return void (await keepWhole(await item.getType(type)))
+      }
+      setError("There's no picture on the clipboard yet. In Photos, touch and hold the part you want, tap Copy, then try again.")
+    } catch {
+      setError(PASTE_ON_PAGE)
+    }
+  }
+
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="sticker-maker-title">
@@ -137,6 +171,17 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           hidden
           onChange={(e) => {
             void pick(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
+        <input
+          ref={wholeRef}
+          type="file"
+          accept="image/png,image/webp,image/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void keepWhole(f)
             e.target.value = ''
           }}
         />
@@ -157,16 +202,42 @@ export function StickerMaker({ onDone, onCancel }: Props) {
             />
           </>
         ) : (
-          <p className="muted">Pick a photo to cut a sticker out of.</p>
+          <div className="sticker-ways">
+            <button type="button" className="sticker-way" onClick={pasteCutOut} disabled={busy}>
+              <span className="sticker-way-icon" aria-hidden="true">
+                📋
+              </span>
+              <strong>Paste an iPhone cut-out</strong>
+              <span className="muted">
+                In Photos, touch and hold the part of a photo you want until it lifts, tap Copy, then tap here.
+              </span>
+            </button>
+            <button type="button" className="sticker-way" onClick={() => fileRef.current?.click()} disabled={busy}>
+              <span className="sticker-way-icon" aria-hidden="true">
+                ✂️
+              </span>
+              <strong>Trace it yourself</strong>
+              <span className="muted">Pick a photo and draw around the part you want.</span>
+            </button>
+            <button type="button" className="sticker-way" onClick={() => wholeRef.current?.click()} disabled={busy}>
+              <span className="sticker-way-icon" aria-hidden="true">
+                🖼️
+              </span>
+              <strong>Use a cut-out picture</strong>
+              <span className="muted">A picture with a see-through background (like a saved sticker), as it is.</span>
+            </button>
+          </div>
         )}
         {error && <p className="error">{error}</p>}
         <div className="modal-actions">
           <button type="button" onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" onClick={() => fileRef.current?.click()}>
-            {img ? 'Another photo' : 'Pick a photo'}
-          </button>
+          {img && (
+            <button type="button" onClick={() => fileRef.current?.click()}>
+              Another photo
+            </button>
+          )}
           {img && (
             <button type="button" onClick={() => make(true)} disabled={busy}>
               Use the whole picture
