@@ -2524,3 +2524,39 @@ button.make-sticker {
   border: 1.5px solid var(--accent);
   border-radius: 0;
 }
+
+/* Text wrapping around the pictures (lib/textWrap.ts): each picture has an invisible float in the text's
+   flow, on the side it sits on, stacked down the page in order. */
+.journal-flow {
+  display: flow-root;
+}
+
+.wrap-float {
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wrap-float.left {
+  float: left;
+  clear: left;
+}
+
+.wrap-float.right {
+  float: right;
+  clear: right;
+}
+
+/* The editable page text (an editable div, so it can wrap like the saved page) */
+.journal-sheet.editing .journal-text {
+  min-height: calc(var(--line) * 8 + 38px);
+  outline: none;
+  cursor: text;
+}
+
+.journal-text.empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}

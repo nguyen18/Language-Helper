@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { newId, nowLocal, objectUrl, useStickers, type JournalEntry, type SheetItem, type Sticker } from '../lib/journal'
 import { firstSlot, type Frame } from '../lib/frames'
 import { shrinkImage } from '../lib/images'
@@ -7,7 +7,7 @@ import { entryDate } from '../lib/journalDates'
 import { AudioNoteRecorder } from './AudioNoteRecorder'
 import { EntryHead } from './EntryHead'
 import { FramesBrowser } from './FramesBrowser'
-import { JournalSheet } from './JournalSheet'
+import { JournalSheet, type SheetApi } from './JournalSheet'
 import { StickerMaker } from './StickerMaker'
 
 // Writing or editing a journal entry, laid out like a zine page (owner's reference: Daplit): a top bar
@@ -37,19 +37,6 @@ function placeNew(items: SheetItem[], w: number, textBottom: number): Pick<Sheet
   return { x: right ? Math.max(0.04, 0.96 - w) : 0.04, y: lowest + 0.03, rotation: right ? 3 : -3 }
 }
 
-// How far down the sheet the text reaches (not counting the empty lines the box starts with).
-function textBottom(frame: HTMLElement | null): number {
-  const box = frame?.querySelector('textarea')
-  if (!frame || !box) return 0
-  const { height, minHeight } = box.style
-  box.style.minHeight = '0'
-  box.style.height = '0'
-  const bottom = box.scrollHeight
-  box.style.minHeight = minHeight
-  box.style.height = height
-  return bottom / frame.getBoundingClientRect().width
-}
-
 export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
   const [when, setWhen] = useState(entry?.when ?? nowLocal)
   const [text, setText] = useState(entry?.text ?? '')
@@ -60,7 +47,7 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
   const [error, setError] = useState<string | null>(null)
   const { stickers, add: addSticker, remove: removeSticker } = useStickers()
   const photoRef = useRef<HTMLInputElement>(null)
-  const sheetRef = useRef<HTMLDivElement>(null)
+  const sheetApi = useRef<SheetApi | null>(null)
   // The tool panel open above the toolbar: one at a time, so the page stays in view on a phone.
   const [panel, setPanel] = useState<Panel | null>(null)
   const toggle = (p: Panel) => setPanel((open) => (open === p ? null : p))
@@ -70,36 +57,13 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
     document.body.classList.add('journal-editing')
     return () => document.body.classList.remove('journal-editing')
   }, [])
-  // Where to put the cursor after a frame is inserted (its first slot, selected).
-  const pendingSelection = useRef<{ start: number; end: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const box = sheetRef.current?.querySelector('textarea')
-    const sel = pendingSelection.current
-    if (!box || !sel) return
-    pendingSelection.current = null
-    box.focus()
-    box.setSelectionRange(sel.start, sel.end)
-  }, [text])
-
-  // A frame's pattern goes in at the cursor (or the end), after a space when needed.
-  const insertFrame = (frame: Frame) => {
-    const box = sheetRef.current?.querySelector('textarea')
-    const start = box?.selectionStart ?? text.length
-    const end = box?.selectionEnd ?? text.length
-    const before = text.slice(0, start)
-    const gap = before && !/\s$/.test(before) ? ' ' : ''
-    const at = start + gap.length
-    const slot = firstSlot(frame.text)
-    pendingSelection.current = slot
-      ? { start: at + slot.start, end: at + slot.end }
-      : { start: at + frame.text.length, end: at + frame.text.length }
-    setText(before + gap + frame.text + text.slice(end))
-  }
+  // A frame's pattern goes in at the cursor (or the end), its first slot ("{place}") selected so typing
+  // replaces it.
+  const insertFrame = (frame: Frame) => sheetApi.current?.insert(frame.text, firstSlot(frame.text) ?? undefined)
 
   const addItem = (kind: SheetItem['kind'], image: Blob, aspect: number) => {
     const w = kind === 'photo' ? 0.42 : 0.26
-    const below = textBottom(sheetRef.current)
+    const below = sheetApi.current?.textBottom() ?? 0
     setItems((list) => [...list, { id: newId(), kind, image, aspect, w, ...placeNew(list, w, below) }])
   }
 
@@ -195,8 +159,9 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
           </span>
         </EntryHead>
 
-        <div ref={sheetRef}>
+        <div>
           <JournalSheet
+            apiRef={sheetApi}
             text={text}
             items={items}
             onTextChange={setText}
