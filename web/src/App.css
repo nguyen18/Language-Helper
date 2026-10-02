@@ -2945,9 +2945,8 @@ div.audio-bar {
   box-shadow: none;
 }
 
-/* Stickers: no shadow; a thin blue outline that follows the cut-out's edge (four hard drop-shadows), owner's
-   feedback 2026-10-01. */
+/* Stickers sit plain on the page: no shadow or outline (owner's feedback 2026-10-01; a blue outline was
+   tried and removed). */
 .sheet-item.sticker img {
-  filter: drop-shadow(1.5px 0 0 var(--accent)) drop-shadow(-1.5px 0 0 var(--accent))
-    drop-shadow(0 1.5px 0 var(--accent)) drop-shadow(0 -1.5px 0 var(--accent));
+  filter: none;
 }
