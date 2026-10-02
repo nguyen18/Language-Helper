@@ -26,11 +26,17 @@ import {
 import type { CheatsheetEntry, Meaning } from '../lib/cheatsheet'
 import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/languages'
 import { entryFor } from '../lib/translateWords'
+import { entryDate } from '../lib/journalDates'
+import { loadJournalFont } from '../lib/journalFont'
 import { loadWordOptions, type WordAlternatives } from '../lib/wordOptions'
 
 // The journal: entries written in the target language (English where the learner doesn't know a word yet),
 // latest on top. Each shows the user's own words untouched (blue), and underneath, Mai's corrected copy
 // (red), sentence by sentence, from which-dialect's journal review.
+
+// The page is styled like a zine journal (Daplit, owner's reference 2026-10-01): graph paper, thin ink
+// lines, Space Grotesk headings framed by slashes ("/ Journal /").
+loadJournalFont()
 
 type Editing = { entry?: JournalEntry } | null
 // Per entry: a check in progress, or the last one that failed.
@@ -75,88 +81,89 @@ export function Journal() {
   }
 
   return (
-    <main className="app">
-      <header className="header">
-        <h1>Journal</h1>
-        <p className="muted">
-          Write a little about your day in <strong>{target.label}</strong>. Stuck on a word? Write it in English and
-          Mai fills it in. Your words stay as you wrote them, in blue; Mai's corrected copy goes underneath, in
-          red.
-        </p>
-      </header>
+    <main className="journal-page">
+      <div className="journal-inner">
+        <header className="journal-top">
+          <div className="journal-title-row">
+            <h1 className="slashed">Journal</h1>
+            {!editing && (
+              <button type="button" className="icon-button" aria-label="New entry" title="New entry" onClick={() => setEditing({})}>
+                ＋
+              </button>
+            )}
+          </div>
+          <p className="journal-intro">
+            Write about your day in <strong>{target.label}</strong>. Stuck on a word? Write it in English and Mai fills
+            it in: your words stay blue, Mai's notes are red.
+          </p>
+        </header>
 
-      {error && <p className="error">{error}</p>}
+        {error && <p className="error">{error}</p>}
 
-      {editing ? (
-        <JournalEditor
-          key={editing.entry?.id ?? 'new'}
-          target={editing.entry ? targetById(editing.entry.targetId) : target}
-          entry={editing.entry}
-          onSave={onSave}
-          onCancel={() => setEditing(null)}
-        />
-      ) : (
-        <div className="footer-actions journal-new">
-          <button type="button" className="primary" onClick={() => setEditing({})}>
-            ✎ New entry
-          </button>
-        </div>
-      )}
+        {editing ? (
+          <JournalEditor
+            key={editing.entry?.id ?? 'new'}
+            target={editing.entry ? targetById(editing.entry.targetId) : target}
+            entry={editing.entry}
+            onSave={onSave}
+            onCancel={() => setEditing(null)}
+          />
+        ) : (
+          entries?.length === 0 && (
+            <div className="journal-new">
+              <button type="button" className="primary" onClick={() => setEditing({})}>
+                ✎ Write your first entry
+              </button>
+            </div>
+          )
+        )}
 
-      {entries === null ? (
-        <p className="muted">Loading your journal…</p>
-      ) : entries.length === 0 ? (
-        !editing && (
-          <section className="card">
-            <p className="muted">
-              No entries yet. Write one, or record an audio note and type out what you said: typed words are what
-              Mai can check.
+        {entries === null ? (
+          <p className="muted">Loading your journal…</p>
+        ) : entries.length === 0 ? (
+          !editing && (
+            <p className="journal-empty">
+              No entries yet. Write one, or record an audio note and type out what you said: typed words are what Mai
+              can check.
             </p>
-          </section>
-        )
-      ) : (
-        <ol className="journal-list">
-          {entries
-            .filter((e) => e.id !== editing?.entry?.id)
-            .map((entry) => (
-              <EntryCard
-                key={entry.id}
-                entry={entry}
-                checkState={checks[entry.id]}
-                onCheck={() => runCheck(entry)}
-                extraChecks={extraChecks}
-                onAcceptHint={(key) =>
-                  entry.check &&
-                  save({ ...entry, check: { ...entry.check, acceptedHints: [...(entry.check.acceptedHints ?? []), key] } })
-                }
-                onPickWord={(key, word) =>
-                  entry.check && save({ ...entry, check: { ...entry.check, wordPicks: { ...entry.check.wordPicks, [key]: word } } })
-                }
-                onEdit={() => {
-                  setEditing({ entry })
-                  window.scrollTo(0, 0)
-                }}
-                onDelete={() => remove(entry.id)}
-              />
-            ))}
-        </ol>
-      )}
+          )
+        ) : (
+          <ol className="journal-list">
+            {entries
+              .filter((e) => e.id !== editing?.entry?.id)
+              .map((entry) => (
+                <EntryCard
+                  key={entry.id}
+                  entry={entry}
+                  currentTarget={target.id}
+                  checkState={checks[entry.id]}
+                  onCheck={() => runCheck(entry)}
+                  extraChecks={extraChecks}
+                  onAcceptHint={(key) =>
+                    entry.check &&
+                    save({ ...entry, check: { ...entry.check, acceptedHints: [...(entry.check.acceptedHints ?? []), key] } })
+                  }
+                  onPickWord={(key, word) =>
+                    entry.check && save({ ...entry, check: { ...entry.check, wordPicks: { ...entry.check.wordPicks, [key]: word } } })
+                  }
+                  onEdit={() => {
+                    setEditing({ entry })
+                    window.scrollTo(0, 0)
+                  }}
+                  onDelete={() => remove(entry.id)}
+                />
+              ))}
+          </ol>
+        )}
+      </div>
     </main>
   )
 }
 
-const formatWhen = (when: string) =>
-  new Date(when).toLocaleString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-
 type CardProps = {
   entry: JournalEntry
+  /** The language being learned now: an entry in another one says which. */
+  currentTarget: string
   checkState?: 'checking' | 'failed'
   onCheck: () => void
   extraChecks: boolean
@@ -166,21 +173,18 @@ type CardProps = {
   onDelete: () => void
 }
 
-function EntryCard({ entry, checkState, onCheck, extraChecks, onAcceptHint, onPickWord, onEdit, onDelete }: CardProps) {
+function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onAcceptHint, onPickWord, onEdit, onDelete }: CardProps) {
   const [confirming, setConfirming] = useState(false)
   const lang = targetById(entry.targetId)
   // A check from before the entry was last edited (or in an older format) doesn't count.
   const check =
     entry.check?.input === entry.text && entry.check.review && 'extraChecks' in entry.check ? entry.check : undefined
 
+  const date = entryDate(entry.when, lang.code)
+
   return (
-    <li className="card journal-entry">
-      <div className="card-head">
-        <h2>
-          <time dateTime={entry.when}>{formatWhen(entry.when)}</time>
-        </h2>
-        <span className="language-tag">{lang.label}</span>
-      </div>
+    <li className="journal-entry">
+      <EntryHead when={entry.when} date={date} label={entry.targetId !== currentTarget ? lang.label : undefined} lang={lang.code} />
 
       {(entry.text || entry.items.length > 0) && (
         <JournalSheet text={entry.text} items={entry.items} lang={lang.code} />
@@ -266,11 +270,12 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWo
   return (
     <section className="journal-correction" aria-label="Mai's corrections">
       <div className="journal-correction-head">
-        <p className="journal-correction-label">
-          {changes.length
-            ? `Corrected by Mai · ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`
-            : 'Checked by Mai'}
-        </p>
+        <h3 className="slashed journal-correction-label">
+          Mai's notes
+          <span className="journal-correction-count">
+            {changes.length ? `${changes.length} ${changes.length === 1 ? 'change' : 'changes'}` : 'checked'}
+          </span>
+        </h3>
         {kinds.length > 0 && (
           <ul className="change-legend" aria-label="Kinds of changes">
             {kinds.map((k) => (
@@ -744,5 +749,36 @@ function WordAlternativesBox({ word, shown, onPick, target, tag = 'your word', s
       )}
       {!alternatives && !skipAccents && <p className="muted">No other words to choose from.</p>}
     </>
+  )
+}
+
+type EntryHeadProps = {
+  when: string
+  date: ReturnType<typeof entryDate>
+  /** The entry's language, shown only when it isn't the one being learned now. */
+  label?: string
+  lang: string
+}
+
+// An entry's header, like a zine page's: a bordered "Date" row in the language being learned (the English
+// on hover), and the week with the entry's day circled.
+export function EntryHead({ when, date, label, lang }: EntryHeadProps) {
+  return (
+    <div className="entry-head">
+      <div className="entry-date-row">
+        <span className="entry-date-label">Date</span>
+        <time dateTime={when} className="entry-date" lang={lang} title={date.english}>
+          {date.date} · {date.time}
+        </time>
+        {label && <span className="language-tag">{label}</span>}
+      </div>
+      <ol className="entry-week" aria-label="Week">
+        {date.week.map((d, i) => (
+          <li key={i} className={d.today ? 'today' : undefined} lang={lang} title={d.long} aria-current={d.today ? 'date' : undefined}>
+            {d.label}
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }

@@ -1988,3 +1988,298 @@ button.tip-trigger.word-mark.picked {
 .tip-box > .word-options-label:first-child {
   margin-top: 0;
 }
+
+/* =========================================================================================================
+   Journal, zine style (owner's reference: Daplit, 2026-10-01): graph paper, thin ink lines and square
+   corners, Space Grotesk headings framed by slashes, tape on photos. Only the journal uses this look.
+   ========================================================================================================= */
+.journal-page {
+  --ink: var(--text);
+  --grid: #e7e6f3;
+  --cell: 22px;
+  --display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: var(--cell) var(--cell);
+}
+
+.journal-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 16px 96px;
+}
+
+.journal-page h1,
+.journal-page h2,
+.journal-page h3,
+.journal-page .entry-date-row,
+.journal-page .entry-week {
+  font-family: var(--display);
+}
+
+/* "/ Journal /" */
+.slashed::before {
+  content: '/ ';
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.slashed::after {
+  content: ' /';
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.journal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journal-title-row h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Square outline buttons (＋, ←), like a zine's toolbar */
+button.icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+}
+
+button.icon-button:active {
+  background: var(--accent-soft);
+}
+
+.journal-intro {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.journal-empty {
+  margin-top: 20px;
+  color: var(--muted);
+}
+
+.journal-page .journal-new {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.journal-page button.primary,
+.journal-page button.chip,
+.journal-page .journal-sheet {
+  border-radius: 0;
+}
+
+.journal-page button.chip {
+  border-color: var(--ink);
+}
+
+/* An entry: a bordered page with a "Date" row and the week on top */
+.journal-entry {
+  margin-top: 20px;
+  padding-bottom: 14px;
+  list-style: none;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+}
+
+.journal-entry > :not(.entry-head) {
+  margin-left: 14px;
+  margin-right: 14px;
+}
+
+.entry-head {
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.entry-date-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  border-bottom: 1px solid var(--ink);
+}
+
+.entry-date-label {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-right: 1px solid var(--ink);
+}
+
+.entry-date {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.entry-date-row .language-tag {
+  margin-right: 10px;
+  border-radius: 0;
+}
+
+.entry-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 0;
+  padding: 6px 4px;
+  list-style: none;
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.entry-week li {
+  justify-self: center;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+/* The entry's own day, circled */
+.entry-week li.today {
+  color: var(--ink);
+  font-weight: 700;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+}
+
+/* The page itself: graph paper whose rows are the text's lines */
+.journal-page .journal-sheet-frame {
+  margin-top: 14px;
+}
+
+.journal-page .journal-sheet {
+  border: none;
+  background-color: transparent;
+  background-image:
+    linear-gradient(to bottom, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px)),
+    linear-gradient(90deg, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px));
+  background-size: var(--line) var(--line);
+  background-position: 0 14px;
+}
+
+.journal-page .journal-sheet.editing {
+  outline: 1px dashed var(--border);
+}
+
+.journal-page .journal-sheet.editing:focus-within {
+  outline-color: var(--accent);
+}
+
+/* Photos are taped on: a strip of blush tape across the top */
+.sheet-item.photo::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  z-index: 1;
+  width: 40%;
+  height: 18px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: color-mix(in srgb, var(--blush) 80%, transparent);
+  box-shadow: 0 1px 2px rgb(35 37 110 / 0.12);
+}
+
+.journal-page .sheet-item.photo img {
+  border-radius: 0;
+}
+
+/* "/ Mai's notes /" */
+.journal-page .journal-correction {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--ink);
+}
+
+.journal-page h3.journal-correction-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--translation);
+}
+
+.journal-correction-count {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* The "/ Mai's notes /" title's slashes come after the label text in the flex row. */
+.journal-page h3.journal-correction-label::after {
+  order: 0;
+}
+
+.journal-page .journal-correction-count {
+  order: 1;
+}
+
+.journal-page .change-legend li {
+  border-radius: 0;
+}
+
+.journal-page .journal-entry-actions {
+  justify-content: flex-end;
+}
+
+/* The editor, until it gets its own layout */
+.journal-page .journal-editor {
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+}
+
+@media (max-width: 600px) {
+  .journal-inner {
+    padding: 14px 12px 96px;
+  }
+
+  .journal-entry > :not(.entry-head) {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .entry-date-row {
+    grid-template-columns: auto 1fr;
+  }
+
+  /* On a phone the language tag moves under the date, so the date has the row. */
+  .entry-date-row .language-tag {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0 0 6px 12px;
+  }
+
+  .entry-week {
+    font-size: 0.7rem;
+  }
+
+  .entry-week li {
+    padding: 2px 4px;
+  }
+}
