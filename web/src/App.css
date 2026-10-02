@@ -1930,6 +1930,12 @@ button.frame-option {
   overflow-y: auto;
 }
 
+/* These meanings have no star, so the word type takes the first column instead of
+   overflowing the star's narrow one onto the definition. */
+.other-meanings button.tip-option {
+  grid-template-columns: auto 1fr;
+}
+
 /* A suggested word's meanings, one per line, under the word */
 .option-meaning {
   display: block;
