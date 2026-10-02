@@ -116,7 +116,7 @@ export function Journal() {
             )}
           </div>
           <p className="journal-intro">
-            Write about your day in <strong>{target.label}</strong>. Stuck on a word? Write it in English and Mai fills
+            Write about your favorite topics, feelings or your day in <strong>{target.label}</strong>. Stuck on a word? Write it in English and Mai fills
             it in: your words stay blue, Mai's notes are red.
           </p>
           <HighlightKey extraChecks={extraChecks} />
