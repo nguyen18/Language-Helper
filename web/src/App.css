@@ -2472,3 +2472,55 @@ button.make-sticker {
     padding: 2px 4px;
   }
 }
+
+/* Captions: a label hanging under a sticker or photo, with an arrow, like a zine's. The learner's words
+   in blue; Mai's fix in red. */
+.item-caption,
+.item-caption-input {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* About as wide as its picture (at least 96px), wrapping rather than running off the page's edge. */
+.item-caption {
+  width: max(100%, 96px);
+  margin: 0;
+  font-family: var(--display, system-ui);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.caption-arrow {
+  margin-right: 3px;
+  opacity: 0.7;
+}
+
+.item-caption s {
+  opacity: 0.6;
+}
+
+/* Mai's version on its own line, under the learner's struck-out one. */
+.caption-fix {
+  display: block;
+  color: var(--translation);
+}
+
+/* At least 16px, so iPhones don't zoom in when it's focused. */
+.item-caption-input {
+  width: max(130%, 140px);
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  border-radius: 0;
+}

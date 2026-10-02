@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import type { SpellingCheck } from './spelling'
+import type { CaptionCheck, SpellingCheck } from './spelling'
 
 // Journal entries and the user's stickers, saved in this browser's IndexedDB (photos, stickers and audio
 // are files, too big for localStorage). There are no accounts yet, so they stay on this device.
@@ -17,6 +17,13 @@ export type SheetItem = {
   aspect: number
   /** Degrees, clockwise. */
   rotation: number
+  /**
+   * A label under the picture, like a zine sticker's, in the language being learned (vocabulary practice):
+   * English is fine, Mai fills in the word ("matcha latte" → "trà xanh sữa").
+   */
+  caption?: string
+  /** Mai's check of the caption; stale when its `input` isn't the caption any more. */
+  captionCheck?: CaptionCheck
 }
 
 export type AudioNote = { blob: Blob; seconds: number }

@@ -17,11 +17,13 @@ type Props = {
   onTextChange?: (text: string) => void
   onItemsChange?: (items: SheetItem[]) => void
   placeholder?: string
+  /** Shown in an empty caption box under a selected picture: "Label it in Southern Vietnamese…". */
+  captionPlaceholder?: string
   lang?: string
   label?: string
 }
 
-export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, lang, label }: Props) {
+export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, captionPlaceholder, lang, label }: Props) {
   const editable = Boolean(onTextChange && onItemsChange)
   const sheetRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
@@ -138,7 +140,8 @@ export function JournalSheet({ text, items, onTextChange, onItemsChange, placeho
       <div
         ref={sheetRef}
         className={`journal-sheet${editable ? ' editing' : ''}`}
-        style={{ minHeight: `calc(${bottom * 100}cqw + 24px)` }}
+        // Captions hang below their pictures: leave room for one.
+        style={{ minHeight: `calc(${bottom * 100}cqw + ${items.some((i) => i.caption || i.id === selected) ? 56 : 24}px)` }}
         onPointerDown={() => setSelected(null)}
       >
         {editable ? (
@@ -166,6 +169,9 @@ export function JournalSheet({ text, items, onTextChange, onItemsChange, placeho
             selected={selected === item.id}
             onStart={(e, mode) => startDrag(e, item, mode)}
             onKey={(e) => onItemKey(e, item)}
+            onCaption={(caption) => update(item.id, { caption })}
+            captionPlaceholder={captionPlaceholder}
+            lang={lang}
             onFocus={() => setSelected(item.id)}
             onRemove={() => remove(item.id)}
           />
@@ -183,9 +189,12 @@ type ItemProps = {
   onKey: (e: KeyboardEvent) => void
   onFocus: () => void
   onRemove: () => void
+  onCaption: (caption: string) => void
+  captionPlaceholder?: string
+  lang?: string
 }
 
-function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove }: ItemProps) {
+function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove, onCaption, captionPlaceholder, lang }: ItemProps) {
   const url = objectUrl(item.image)
   const name = item.kind === 'photo' ? 'Photo' : 'Sticker'
   return (
@@ -206,7 +215,26 @@ function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove 
         onFocus,
       })}
     >
-      <img src={url} alt={editable ? '' : name} draggable={false} />
+      <img src={url} alt={editable ? '' : item.caption || name} draggable={false} />
+      {editable && selected ? (
+        // Typing here mustn't drag the picture or reach its keyboard shortcuts (Backspace removes it).
+        <input
+          className="item-caption-input"
+          value={item.caption ?? ''}
+          placeholder={captionPlaceholder}
+          lang={lang}
+          aria-label={`${name} caption`}
+          enterKeyHint="done"
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+          onChange={(e) => onCaption(e.target.value)}
+        />
+      ) : (
+        item.caption && <Caption item={item} lang={lang} />
+      )}
       {editable && selected && (
         <>
           <button
@@ -225,5 +253,27 @@ function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove 
         </>
       )}
     </div>
+  )
+}
+
+// A picture's caption, hanging below it with a small arrow, like a zine sticker's label. The learner's words
+// are blue; when Mai changed them, they're struck out and her version follows in red.
+function Caption({ item, lang }: { item: SheetItem; lang?: string }) {
+  const caption = item.caption ?? ''
+  const check = item.captionCheck?.input === caption ? item.captionCheck : undefined
+  const fixed = check && check.corrected.trim() !== caption.trim() ? check : undefined
+  return (
+    <p className="item-caption" lang={lang} title={fixed?.changes.map((c) => c.why).join(' ')}>
+      <span className="caption-arrow" aria-hidden="true">
+        ↳
+      </span>
+      {fixed ? (
+        <>
+          <s>{caption}</s> <strong className="caption-fix">{fixed.corrected}</strong>
+        </>
+      ) : (
+        <span>{caption}</span>
+      )}
+    </p>
   )
 }

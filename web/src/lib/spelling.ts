@@ -202,3 +202,11 @@ export function keepCapital(word: string, pick: string): string {
   const first = word.charAt(0)
   return first && first !== first.toLowerCase() ? pick.charAt(0).toUpperCase() + pick.slice(1) : pick
 }
+
+/** Mai's check of a sticker's or photo's caption: the corrected label and what changed. */
+export type CaptionCheck = { input: string; corrected: string; changes: ReviewChange[] }
+
+export async function checkCaption(target: TargetLanguage, input: string, extraChecks: boolean): Promise<CaptionCheck> {
+  const { review } = await checkSpelling(target, input, extraChecks)
+  return { input, corrected: review.corrected, changes: review.sentences.flatMap((s) => s.changes) }
+}

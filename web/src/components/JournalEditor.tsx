@@ -204,6 +204,7 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
             lang={target.code}
             label={`Your entry, in ${target.label}`}
             placeholder={`Write your entry in ${target.label}. Stuck on a word? Write it in English…`}
+            captionPlaceholder={`Label it in ${target.label}…`}
           />
         </div>
         {audio && panel !== 'audio' && (

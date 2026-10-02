@@ -9,6 +9,7 @@ import {
   changeKey,
   keepCapital,
   keptWordKey,
+  checkCaption,
   checkSpelling,
   kindOf,
   reviewNotes,
@@ -73,12 +74,35 @@ export function Journal() {
     }
   }
 
+  // Captions are checked one by one (a few words each), and saved onto the entry as it is by then, for
+  // captions that didn't change while Mai was checking.
+  const runCaptionChecks = async (entry: JournalEntry) => {
+    if (!backendConfigured) return
+    const stale = entry.items.filter((i) => i.caption?.trim() && i.captionCheck?.input !== i.caption)
+    if (!stale.length) return
+    const lang = targetById(entry.targetId)
+    const results = await Promise.all(
+      stale.map(async (i) => ({ id: i.id, caption: i.caption!, check: await checkCaption(lang, i.caption!, extraChecks).catch(() => null) })),
+    )
+    const latest = entriesRef.current?.find((e) => e.id === entry.id)
+    if (!latest) return
+    const items = latest.items.map((i) => {
+      const r = results.find((x) => x.id === i.id && x.caption === i.caption && x.check)
+      return r ? { ...i, captionCheck: r.check! } : i
+    })
+    await save({ ...latest, items })
+  }
+
   const onSave = async (entry: JournalEntry) => {
     await save(entry)
     setEditing(null)
     window.scrollTo(0, 0)
-    // Check again only when the words changed since the last check.
-    if (entry.text && entry.check?.input !== entry.text) void runCheck(entry)
+    // Check again only what changed since the last check: the words, then the captions (one after the
+    // other, so neither save overwrites the other's).
+    void (async () => {
+      if (entry.text && entry.check?.input !== entry.text) await runCheck(entry)
+      await runCaptionChecks(entry)
+    })()
   }
 
   return (
