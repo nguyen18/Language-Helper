@@ -2950,3 +2950,29 @@ div.audio-bar {
 .sheet-item.sticker img {
   filter: none;
 }
+
+@media (max-width: 600px) {
+  /* The writing area reaches the bottom of the full-screen editor (owner's feedback), so the whole page
+     below the text is part of it: each box down the chain fills the space left. The text box itself stays
+     a plain block, so it still wraps around the pictures' floats. */
+  .editor-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-page,
+  .editor-page .journal-sheet-frame,
+  .editor-page .journal-sheet {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-page .journal-flow {
+    flex: 1;
+  }
+
+  .editor-page .journal-sheet.editing .journal-text {
+    min-height: 100%;
+  }
+}

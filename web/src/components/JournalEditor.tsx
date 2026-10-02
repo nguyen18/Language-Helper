@@ -159,7 +159,7 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
           </span>
         </EntryHead>
 
-        <div>
+        <div className="editor-page">
           <JournalSheet
             apiRef={sheetApi}
             text={text}
