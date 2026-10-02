@@ -2865,3 +2865,73 @@ ruby.fix {
 .entry-paper:has(.entry-tools.with-audio) {
   padding-bottom: 44px;
 }
+
+/* The audio note's player, in the journal's style: a square play button, a thin ink line with a square
+   handle (filled in blush as it plays), and the time. */
+div.audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.entry-tools div.audio-bar {
+  flex: 1;
+  height: auto;
+}
+
+.audio-play {
+  flex: none;
+  font-size: 0.75rem;
+}
+
+.audio-seek {
+  flex: 1;
+  min-width: 40px;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.audio-seek::-webkit-slider-runnable-track {
+  height: 6px;
+  background: linear-gradient(to right, var(--blush) var(--progress, 0%), var(--surface) var(--progress, 0%));
+  border: 1.5px solid var(--text);
+}
+
+.audio-seek::-moz-range-track {
+  height: 6px;
+  background: linear-gradient(to right, var(--blush) var(--progress, 0%), var(--surface) var(--progress, 0%));
+  border: 1.5px solid var(--text);
+}
+
+.audio-seek::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5.5px;
+  background: var(--text);
+  border: none;
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.audio-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--text);
+  border: none;
+  border-radius: 0;
+}
+
+.audio-time {
+  flex: none;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
