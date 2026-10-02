@@ -121,8 +121,11 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
         createdAt: entry?.createdAt ?? now,
         updatedAt: now,
       })
-    } catch {
-      setError("Couldn't save the entry. Try again.")
+    } catch (err) {
+      // The browser's reason, so a failure on one phone can be told apart from another.
+      const reason = err instanceof Error || err instanceof DOMException ? `${err.name}: ${err.message}` : String(err)
+      console.error('Saving the journal entry failed:', err)
+      setError(`Couldn't save the entry. Try again. (${reason})`)
       setSaving(false)
     }
   }

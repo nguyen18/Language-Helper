@@ -91,9 +91,36 @@ async function run<T>(store: string, mode: IDBTransactionMode, op: (s: IDBObject
   return new Promise((resolve, reject) => {
     const req = op(tx.objectStore(store))
     tx.oncomplete = () => resolve(req.result)
-    tx.onerror = () => reject(tx.error)
-    tx.onabort = () => reject(tx.error)
+    // A transaction can fail without an error object (aborted): say which store and what, then.
+    tx.onerror = () => reject(tx.error ?? req.error ?? new Error(`Writing to ${store} failed`))
+    tx.onabort = () => reject(tx.error ?? req.error ?? new Error(`Writing to ${store} was aborted`))
   })
+}
+
+// Pictures and recordings are stored as bytes (ArrayBuffer + type), not Blobs: iPhone Safari can fail to store
+// Blobs in IndexedDB ("UnknownError: Error preparing Blob/File data", e.g. in Private Browsing), which broke
+// saving entries with a photo or sticker (owner's report 2026-10-02). They're turned back into Blobs when
+// read; entries and stickers stored as Blobs before still read as they are.
+type StoredFile = { bytes: ArrayBuffer; type: string }
+const isStoredFile = (v: unknown): v is StoredFile =>
+  typeof v === 'object' && v !== null && (v as StoredFile).bytes instanceof ArrayBuffer
+const toStored = async (b: Blob): Promise<StoredFile> => ({ bytes: await b.arrayBuffer(), type: b.type })
+const toBlob = (v: Blob | StoredFile): Blob => (isStoredFile(v) ? new Blob([v.bytes], { type: v.type }) : v)
+
+async function storeEntry(e: JournalEntry) {
+  return {
+    ...e,
+    items: await Promise.all(e.items.map(async (i) => ({ ...i, image: await toStored(i.image) }))),
+    ...(e.audio ? { audio: { ...e.audio, blob: await toStored(e.audio.blob) } } : {}),
+  }
+}
+
+function readEntry(e: JournalEntry): JournalEntry {
+  return {
+    ...e,
+    items: e.items.map((i) => ({ ...i, image: toBlob(i.image as Blob | StoredFile) })),
+    ...(e.audio ? { audio: { ...e.audio, blob: toBlob(e.audio.blob as Blob | StoredFile) } } : {}),
+  }
 }
 
 // Asks the browser not to clear the journal when space runs low. Best effort: some browsers decide alone.
@@ -121,7 +148,7 @@ export function useJournal() {
 
   useEffect(() => {
     run<JournalEntry[]>(ENTRIES, 'readonly', (s) => s.getAll())
-      .then((all) => setEntries(all.sort(latestFirst)))
+      .then((all) => setEntries(all.map(readEntry).sort(latestFirst)))
       .catch(() => {
         setEntries([])
         setError("This browser can't save journal entries (private browsing can block it).")
@@ -129,7 +156,8 @@ export function useJournal() {
   }, [])
 
   const save = useCallback(async (entry: JournalEntry) => {
-    await run(ENTRIES, 'readwrite', (s) => s.put(entry))
+    const stored = await storeEntry(entry)
+    await run(ENTRIES, 'readwrite', (s) => s.put(stored))
     askToPersist()
     setEntries((list) => [...(list ?? []).filter((e) => e.id !== entry.id), entry].sort(latestFirst))
   }, [])
@@ -148,13 +176,20 @@ export function useStickers() {
 
   useEffect(() => {
     run<Sticker[]>(STICKERS, 'readonly', (s) => s.getAll())
-      .then((all) => setStickers(all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))))
+      .then((all) =>
+        setStickers(
+          all
+            .map((st) => ({ ...st, image: toBlob(st.image as Blob | StoredFile) }))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        ),
+      )
       .catch(() => {})
   }, [])
 
   const add = useCallback(async (sticker: Sticker) => {
     setStickers((list) => [sticker, ...list])
-    await run(STICKERS, 'readwrite', (s) => s.put(sticker)).catch(() => {})
+    const stored = { ...sticker, image: await toStored(sticker.image) }
+    await run(STICKERS, 'readwrite', (s) => s.put(stored)).catch(() => {})
   }, [])
 
   const remove = useCallback(async (id: string) => {
