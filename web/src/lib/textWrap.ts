@@ -12,8 +12,8 @@ import type { SheetItem } from './journal'
 const GAP_X = 10
 const GAP_Y = 6
 const CAPTION = 38
-// A photo's white frame (6px around, 18px below: .sheet-item.photo img), which its size doesn't include.
-const PHOTO_FRAME = { x: 12, y: 24 }
+// A photo's frame, which its size doesn't include. None since photos lost their white border (2026-10-01).
+const PHOTO_FRAME = { x: 0, y: 0 }
 // Rows the sticker outline is measured in.
 const ROWS = 24
 

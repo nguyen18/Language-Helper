@@ -2503,8 +2503,17 @@ button.make-sticker {
 }
 
 .caption-arrow {
-  margin-right: 3px;
-  opacity: 0.7;
+  display: inline-block;
+  width: 1.15em;
+  height: 1.75em;
+  margin-right: 2px;
+  vertical-align: -0.45em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
 }
 
 .item-caption s {
@@ -2936,4 +2945,11 @@ div.audio-bar {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--text);
+}
+
+/* Photos sit plain on the page: no white border or shadow (owner's feedback 2026-10-01); the tape stays. */
+.sheet-item.photo img,
+.journal-page .sheet-item.photo img {
+  border: none;
+  box-shadow: none;
 }
