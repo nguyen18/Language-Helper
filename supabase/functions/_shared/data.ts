@@ -8,7 +8,7 @@
 // VERSION (its cached rows are per version).
 
 const STORAGE = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/which-dialect`
-export const DATA_VERSIONS: Record<string, string> = { en: '0.1.1', vi: '0.1.6' }
+export const DATA_VERSIONS: Record<string, string> = { en: '0.1.2', vi: '0.1.6' }
 
 export const dataUrl = (lang: string) => {
   const version = DATA_VERSIONS[lang]
