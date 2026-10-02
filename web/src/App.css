@@ -1668,26 +1668,6 @@ button.chip.danger {
   cursor: crosshair;
 }
 
-/* Sentence frames the entry follows, for reusing the patterns. */
-.journal-frames {
-  margin-top: 10px;
-  font-size: 0.85rem;
-}
-
-.journal-frames summary {
-  cursor: pointer;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.journal-frames ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
-}
-
-.journal-frames li span:first-child {
-  font-weight: 600;
-}
 
 /* Settings: on/off options with a title and an explanation */
 .setting-toggle {

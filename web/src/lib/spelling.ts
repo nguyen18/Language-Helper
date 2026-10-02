@@ -148,14 +148,11 @@ export function sentencePieces(s: ReviewSentence): Piece[] {
 /** A hint with its key (`${sentence}:${hint}`), for accepting it. */
 export type KeyedHint = ReviewHint & { key: string }
 
-/** Every change, hint and frame of the review, gathered across sentences. Frames are listed once each. */
+/** Every change and hint of the review, gathered across sentences. */
 export function reviewNotes(review: Review) {
-  const frames = new Map<string, ReviewFrame>()
-  for (const s of review.sentences) for (const f of s.frames) frames.set(f.id, f)
   return {
     changes: review.sentences.flatMap((s) => s.changes),
     hints: review.sentences.flatMap((s, si) => s.hints.map((h, hi): KeyedHint => ({ ...h, key: `${si}:${hi}` }))),
-    frames: [...frames.values()],
     unchecked: review.sentences.flatMap((s) => s.unchecked),
   }
 }

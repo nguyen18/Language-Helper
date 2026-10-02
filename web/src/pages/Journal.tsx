@@ -268,7 +268,6 @@ type CorrectionProps = {
 }
 
 function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWord, target }: CorrectionProps) {
-  const lang = target.code
   if (!backendConfigured) {
     return <p className="muted journal-check-status">Corrections aren't set up on this site yet.</p>
   }
@@ -285,7 +284,7 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWo
   }
 
   const review = withAcceptedHints(check)
-  const { changes, hints, frames } = reviewNotes(review)
+  const { changes, hints } = reviewNotes(review)
   const accepted = new Set(check.acceptedHints ?? [])
   const openHints = hints.filter((h) => !accepted.has(h.key) && h.suggestions[0] !== undefined)
   const kinds = [...new Map(changes.map((c) => [kindOf(c.kind).color, kindOf(c.kind)])).values()]
@@ -340,19 +339,6 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWo
         </p>
       )}
 
-      {frames.length > 0 && (
-        <details className="journal-frames">
-          <summary>💡 Frames for this entry ({frames.length})</summary>
-          <ul>
-            {frames.map((f) => (
-              <li key={f.id}>
-                <span lang={lang}>{f.text}</span> <span className="muted">· {f.en}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="muted">Reuse them in your next entry: open “Sentence frames” when you write.</p>
-        </details>
-      )}
     </section>
   )
 }
@@ -378,22 +364,11 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
     const last = pieces[pieces.length - 1]
     pieces.push({ ...p, start: last ? last.start + last.text.length : 0 })
   }
-  // The learner's own picks on words Mai left alone, for the notes ("nay → này").
   // The sentence's words of several syllables, shifted to be relative to a piece starting at `from`; only
   // those that lie wholly inside it (a change that overlaps one takes precedence).
   const shift = (from: number, to = sentence.corrected.length) =>
     (sentence.words ?? []).filter((w) => w.start >= from && w.end <= to).map((w) => ({ start: w.start - from, end: w.end - from }))
-  const ownPicks = Object.entries(picks)
-    .filter(([key]) => key.startsWith(`${index}@`))
-    .map(([key, pick]) => {
-      const offset = Number(key.slice(key.indexOf('@') + 1))
-      const word = wordTokens(sentence.corrected.slice(offset), shift(offset))[0]?.text ?? ''
-      return { word, pick: keepCapital(word, pick) }
-    })
-    .filter((p) => p.word && p.word.toLowerCase() !== p.pick.toLowerCase())
   const changed = sentence.changes.length > 0
-  const groups = new Map<string, ReviewChange[]>()
-  for (const c of sentence.changes) groups.set(kindOf(c.kind).label, [...(groups.get(kindOf(c.kind).label) ?? []), c])
 
   return (
     <li className={changed ? 'journal-sentence changed' : 'journal-sentence'}>
@@ -428,31 +403,10 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
           ),
         )}
       </p>
-      {(groups.size > 0 || hints.length > 0 || sentence.unchecked.length > 0 || ownPicks.length > 0) && (
+      {/* Changes and picks show in the sentence itself (tap one for why); only what needs the learner is
+          listed: tips to use, and words Mai couldn't correct. */}
+      {(hints.length > 0 || sentence.unchecked.length > 0) && (
         <ul className="journal-notes">
-          {ownPicks.length > 0 && (
-            <li>
-              {ownPicks.map((p, i) => (
-                <span key={i}>
-                  {i > 0 && ' · '}
-                  <s lang={lang}>{p.word}</s> → <strong lang={lang}>{p.pick}</strong>
-                </span>
-              ))}{' '}
-              <span className="muted">(your {ownPicks.length === 1 ? 'pick' : 'picks'})</span>
-            </li>
-          )}
-          {[...groups].map(([label, list]) => (
-            <li key={label}>
-              {list.map((c, i) => (
-                <span key={i}>
-                  {i > 0 && ' · '}
-                  <s lang={lang}>{c.from}</s> →{' '}
-                  {c.to ? <strong lang={lang}>{shownWord(c, picks[keyOf(c)])}</strong> : <em>left out</em>}
-                </span>
-              ))}{' '}
-              <span className="muted">({label})</span>
-            </li>
-          ))}
           {hints.map((h) => (
             <li key={h.key} className="journal-tip">
               Tip: {h.message}{' '}
