@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { cutOutSticker, loadImage, shrinkImage, type Point } from '../lib/images'
 
 // Makes a sticker, three ways (owner's request 2026-10-01: trace, or the iPhone's own cut-out):
-// - paste an iPhone cut-out: in Photos, touch and hold the subject until it lifts, Copy, then tap here; the
-//   clipboard's picture (see-through background and all) becomes the sticker (Clipboard API, which asks
-//   with a Paste bubble; needs https). Pasting onto the page itself works too (JournalEditor);
+// - lift it with the iPhone: pick a photo, which is shown large as a plain image, so iOS lets you touch and
+//   hold its subject and tap Copy Subject (or drag it onto the box); "Paste sticker" then takes the
+//   clipboard's picture, see-through background and all (Clipboard API, which asks with a Paste bubble;
+//   needs https). A cut-out already copied in Photos can be pasted straight away, or onto the page;
 // - trace it: pick a photo and draw around the part you want; it's cut out with a white border;
 // - use a picture that's already cut out (a PNG with a see-through background) as it is.
 
@@ -32,6 +33,10 @@ export function StickerMaker({ onDone, onCancel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const wholeRef = useRef<HTMLInputElement>(null)
+  const liftRef = useRef<HTMLInputElement>(null)
+  // The photo shown for lifting a subject out of, as an object URL.
+  const [liftUrl, setLiftUrl] = useState<string | null>(null)
+  useEffect(() => () => void (liftUrl && URL.revokeObjectURL(liftUrl)), [liftUrl])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel()
@@ -175,6 +180,20 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           }}
         />
         <input
+          ref={liftRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) {
+              setError(null)
+              setLiftUrl(URL.createObjectURL(f))
+            }
+            e.target.value = ''
+          }}
+        />
+        <input
           ref={wholeRef}
           type="file"
           accept="image/png,image/webp,image/*"
@@ -185,7 +204,29 @@ export function StickerMaker({ onDone, onCancel }: Props) {
             e.target.value = ''
           }}
         />
-        {img ? (
+        {liftUrl ? (
+          // A plain <img>, so iOS offers Copy Subject on touch and hold (a canvas wouldn't); a lifted subject
+          // dragged onto the box works too.
+          <div
+            className="lift-stage"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'))
+              if (!file) return
+              e.preventDefault()
+              void keepWhole(file)
+            }}
+          >
+            <p className="muted">
+              Touch and hold the part you want until it glows, tap <strong>Copy Subject</strong> (or <strong>Copy</strong>),
+              then tap <strong>Paste sticker</strong>.
+            </p>
+            <img className="lift-photo" src={liftUrl} alt="The photo to lift a sticker out of" />
+            <button type="button" className="primary lift-paste" onClick={pasteCutOut} disabled={busy}>
+              📋 Paste sticker
+            </button>
+          </div>
+        ) : img ? (
           <>
             <p className="muted">
               {traced
@@ -203,13 +244,13 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           </>
         ) : (
           <div className="sticker-ways">
-            <button type="button" className="sticker-way" onClick={pasteCutOut} disabled={busy}>
+            <button type="button" className="sticker-way" onClick={() => liftRef.current?.click()} disabled={busy}>
               <span className="sticker-way-icon" aria-hidden="true">
                 📋
               </span>
-              <strong>Paste an iPhone cut-out</strong>
+              <strong>Lift it out of a photo</strong>
               <span className="muted">
-                In Photos, touch and hold the part of a photo you want until it lifts, tap Copy, then tap here.
+                Pick a photo, then touch and hold the part you want until it lifts (iPhone), and paste it here.
               </span>
             </button>
             <button type="button" className="sticker-way" onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -233,6 +274,16 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           <button type="button" onClick={onCancel}>
             Cancel
           </button>
+          {!img && !liftUrl && (
+            <button type="button" onClick={pasteCutOut} disabled={busy}>
+              Paste one I already copied
+            </button>
+          )}
+          {liftUrl && (
+            <button type="button" onClick={() => liftRef.current?.click()}>
+              Another photo
+            </button>
+          )}
           {img && (
             <button type="button" onClick={() => fileRef.current?.click()}>
               Another photo

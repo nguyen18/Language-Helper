@@ -56,6 +56,17 @@ export function JournalSheet({ text, items, onTextChange, onItemsChange, placeho
   // The page is at least as tall as its lowest photo or sticker.
   const bottom = Math.max(0, ...items.map((i) => i.y + i.w * i.aspect))
 
+  // A tap anywhere outside the selected picture (the text, the toolbar, the page around it) puts its edit
+  // handles away; tapping a picture selects it again. Its caption box is inside it, so typing there keeps it.
+  useEffect(() => {
+    if (!selected) return
+    const onDown = (e: globalThis.PointerEvent) => {
+      if (!(e.target as Element | null)?.closest?.('.sheet-item.selected')) setSelected(null)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [selected])
+
   const setItems = (next: SheetItem[]) => {
     itemsRef.current = next
     onItemsChange?.(next)
