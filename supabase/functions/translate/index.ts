@@ -14,7 +14,7 @@ import { dataUrl } from '../_shared/data.ts'
 import { makeEntry, type Entry } from '../_shared/entries.ts'
 
 // Bump with the which-dialect import in deno.json: rows from another version aren't reused.
-const VERSION = '0.5.1'
+const VERSION = '0.5.2'
 // Languages the site offers (TARGET_LANGUAGES in web/src/lib/languages.ts).
 const TARGETS: Record<string, { code: string; region?: string }> = {
   'vi-Southern': { code: 'vi', region: 'Southern' },
