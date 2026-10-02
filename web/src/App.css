@@ -2785,15 +2785,17 @@ ruby.fix {
   white-space: nowrap;
 }
 
-/* An entry's ✎ and 🗑, laid over the top-right corner of its page */
+/* An entry's ✎ and 🗑, laid over the bottom-right corner of its page; the page keeps a strip of blank
+   paper at the bottom for them, so they never sit on the writing. */
 .entry-paper {
   position: relative;
+  padding-bottom: 36px;
 }
 
 .entry-tools {
   position: absolute;
-  top: 8px;
   right: 8px;
+  bottom: 8px;
   z-index: 3;
   display: flex;
   align-items: center;

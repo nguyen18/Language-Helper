@@ -184,9 +184,6 @@ export function Journal() {
   )
 }
 
-// The space the ✎ and 🗑 buttons take in the page's top-right corner (two 30px buttons, a gap and margins).
-const ENTRY_TOOLS_SPACE = { width: 82, height: 42 }
-
 type CardProps = {
   entry: JournalEntry
   /** The language being learned now: an entry in another one says which. */
@@ -215,7 +212,7 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
 
       {/* One sheet of paper: the learner's page, then Mai's notes written at the bottom of it. */}
       <div className={check ? 'entry-paper annotated' : 'entry-paper'}>
-        {/* Edit and delete, laid over the page's top-right corner (the text keeps clear of them). */}
+        {/* Edit and delete, laid over the page's bottom-right corner, in the blank paper under the text. */}
         <div className="entry-tools">
           {confirming ? (
             <span className="journal-confirm">
@@ -244,7 +241,6 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
             items={entry.items}
             lang={lang.code}
             richText={check && <AnnotatedText check={check} onPickWord={onPickWord} target={lang} />}
-            corner={ENTRY_TOOLS_SPACE}
           />
         )}
         {entry.audio && <AudioNotePlayer audio={entry.audio} />}
