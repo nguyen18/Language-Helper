@@ -287,24 +287,16 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint }: Correc
   }
 
   const review = withAcceptedHints(check)
-  const { changes, hints } = reviewNotes(review)
+  const { hints } = reviewNotes(review)
   const accepted = new Set(check.acceptedHints ?? [])
   const openHints = hints.filter((h) => !accepted.has(h.key) && h.suggestions[0] !== undefined)
 
+  // The corrections are written on the page (AnnotatedText); here, only what needs the learner: tips to
+  // use, and a new check after the settings changed. (The "/ Mai's notes / N changes" line was removed,
+  // owner's feedback 2026-10-01.)
+  if (!openHints.length && check.extraChecks === extraChecks) return null
   return (
     <section className="journal-correction" aria-label="Mai's corrections">
-      <h3 className="journal-correction-label">
-        <span className="slashed">Mai's notes</span>
-        <span className="journal-correction-count">
-          {changes.length ? `${changes.length} ${changes.length === 1 ? 'change' : 'changes'}` : 'checked'}
-        </span>
-      </h3>
-
-      {changes.length === 0 && openHints.length === 0 ? (
-        <p className="muted">Nothing to correct. (Mai only points out what she's sure about.)</p>
-      ) : (
-        changes.length > 0 && <p className="muted journal-tap-hint">Tap a red word to see why, or to pick another.</p>
-      )}
       {openHints.length > 0 && (
         <ul className="journal-notes">
           {openHints.map((h) => (
