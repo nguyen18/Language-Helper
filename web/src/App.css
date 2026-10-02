@@ -2605,3 +2605,75 @@ button.sticker-way {
     hyphens: auto;
   }
 }
+
+/* One sheet of paper per entry: the learner's page, then Mai's notes written at the bottom of it, on the
+   same continuous grid (the sheet itself is transparent here). Mai's lines sit on the grid's rows. */
+.journal-page {
+  --line: 1.9rem;
+  --kind-spelling: #fde3cf;
+  --kind-foreign: #fff0a6;
+  --kind-frame: #d9f2df;
+  --kind-dialect: #dbe8ff;
+  --kind-pronoun: #ece0f8;
+}
+
+.entry-paper {
+  margin-top: 14px;
+  background-image:
+    linear-gradient(to bottom, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px)),
+    linear-gradient(90deg, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px));
+  background-size: var(--line) var(--line);
+  background-position: 0 14px;
+}
+
+.journal-page .entry-paper .journal-sheet-frame {
+  margin-top: 0;
+}
+
+.journal-page .entry-paper .journal-sheet {
+  background: none;
+}
+
+.journal-page .entry-paper .journal-correction {
+  margin: 0;
+  padding: 0 18px 12px;
+  border-top: none;
+}
+
+.journal-page .entry-paper h3.journal-correction-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: var(--line);
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: var(--line);
+}
+
+.entry-paper .journal-sentence {
+  padding: 0;
+}
+
+.entry-paper .journal-sentence + .journal-sentence {
+  border-top: none;
+}
+
+.entry-paper .journal-corrected {
+  font-size: 1.05rem;
+  line-height: var(--line);
+}
+
+.entry-paper .audio-note,
+.entry-paper .journal-nudge,
+.entry-paper .journal-check-status {
+  margin-left: 18px;
+  margin-right: 18px;
+}
+
+.entry-paper > .journal-nudge {
+  margin-bottom: 12px;
+}
+
+.page-legend {
+  margin-top: 10px;
+}

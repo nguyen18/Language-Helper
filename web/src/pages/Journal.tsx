@@ -121,6 +121,7 @@ export function Journal() {
             Write about your day in <strong>{target.label}</strong>. Stuck on a word? Write it in English and Mai fills
             it in: your words stay blue, Mai's notes are red.
           </p>
+          <HighlightKey extraChecks={extraChecks} />
         </header>
 
         {error && <p className="error">{error}</p>}
@@ -211,26 +212,29 @@ function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onA
     <li className="journal-entry">
       <EntryHead when={entry.when} date={date} label={entry.targetId !== currentTarget ? lang.label : undefined} lang={lang.code} />
 
-      {(entry.text || entry.items.length > 0) && (
-        <JournalSheet text={entry.text} items={entry.items} lang={lang.code} />
-      )}
-      {entry.audio && <AudioNotePlayer audio={entry.audio} />}
+      {/* One sheet of paper: the learner's page, then Mai's notes written at the bottom of it. */}
+      <div className="entry-paper">
+        {(entry.text || entry.items.length > 0) && (
+          <JournalSheet text={entry.text} items={entry.items} lang={lang.code} />
+        )}
+        {entry.audio && <AudioNotePlayer audio={entry.audio} />}
 
-      {entry.text ? (
-        <Correction
-          check={check}
-          state={checkState}
-          onCheck={onCheck}
-          extraChecks={extraChecks}
-          onAcceptHint={onAcceptHint}
-          onPickWord={onPickWord}
-          target={lang}
-        />
-      ) : (
-        <p className="journal-nudge">
-          Type out what you said in your audio note so Mai can check it. <button type="button" className="inline-link" onClick={onEdit}>Add it now</button>
-        </p>
-      )}
+        {entry.text ? (
+          <Correction
+            check={check}
+            state={checkState}
+            onCheck={onCheck}
+            extraChecks={extraChecks}
+            onAcceptHint={onAcceptHint}
+            onPickWord={onPickWord}
+            target={lang}
+          />
+        ) : (
+          <p className="journal-nudge">
+            Type out what you said in your audio note so Mai can check it. <button type="button" className="inline-link" onClick={onEdit}>Add it now</button>
+          </p>
+        )}
+      </div>
 
       <div className="journal-entry-actions">
         <button type="button" className="chip" onClick={onEdit}>
@@ -287,29 +291,17 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWo
   const { changes, hints } = reviewNotes(review)
   const accepted = new Set(check.acceptedHints ?? [])
   const openHints = hints.filter((h) => !accepted.has(h.key) && h.suggestions[0] !== undefined)
-  const kinds = [...new Map(changes.map((c) => [kindOf(c.kind).color, kindOf(c.kind)])).values()]
   // Hints by sentence, to show each under its sentence.
   const hintsIn = (si: number) => openHints.filter((h) => h.key.startsWith(`${si}:`))
 
   return (
     <section className="journal-correction" aria-label="Mai's corrections">
-      <div className="journal-correction-head">
-        <h3 className="slashed journal-correction-label">
-          Mai's notes
-          <span className="journal-correction-count">
-            {changes.length ? `${changes.length} ${changes.length === 1 ? 'change' : 'changes'}` : 'checked'}
-          </span>
-        </h3>
-        {kinds.length > 0 && (
-          <ul className="change-legend" aria-label="Kinds of changes">
-            {kinds.map((k) => (
-              <li key={k.color} data-kind={k.color}>
-                {k.label}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <h3 className="journal-correction-label">
+        <span className="slashed">Mai's notes</span>
+        <span className="journal-correction-count">
+          {changes.length ? `${changes.length} ${changes.length === 1 ? 'change' : 'changes'}` : 'checked'}
+        </span>
+      </h3>
 
       {changes.length === 0 && openHints.length === 0 ? (
         <p className="muted">Nothing to correct. (Mai only points out what she's sure about.)</p>
@@ -727,3 +719,18 @@ function WordAlternativesBox({ word, shown, onPick, target, tag = 'your word', s
   )
 }
 
+
+// The page's highlighter key, under its description: what each tint in Mai's notes means. The regional
+// word and pronoun tints only appear when those checks are on (Settings).
+function HighlightKey({ extraChecks }: { extraChecks: boolean }) {
+  const kinds = ['spelling', 'foreign-word', 'frame', ...(extraChecks ? ['dialect', 'pronoun-consistency'] : [])]
+  return (
+    <ul className="change-legend page-legend" aria-label="What Mai's highlights mean">
+      {kinds.map((k) => (
+        <li key={k} data-kind={kindOf(k).color}>
+          {kindOf(k).label}
+        </li>
+      ))}
+    </ul>
+  )
+}
