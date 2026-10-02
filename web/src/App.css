@@ -2677,3 +2677,110 @@ button.sticker-way {
 .page-legend {
   margin-top: 10px;
 }
+
+/* Mai's corrections written over the learner's own words, like a teacher's red pen (<ruby>): her word small
+   and red above, tinted by kind; English crossed out in red; other fixes underlined. Pages with corrections
+   get taller grid rows, so there's room above each line. */
+.entry-paper.annotated,
+.entry-paper.annotated .journal-sheet {
+  --line: 2.6rem;
+}
+
+.journal-text.annotated {
+  padding-top: 20px;
+}
+
+ruby.fix {
+  ruby-position: over;
+  ruby-align: center;
+}
+
+.fix-new {
+  padding: 0 3px;
+  font-family: var(--display, system-ui);
+  font-size: 0.68em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--translation);
+  border-radius: 3px;
+}
+
+.fix-new[data-kind='spelling'] {
+  background: var(--kind-spelling);
+}
+
+.fix-new[data-kind='foreign'] {
+  background: var(--kind-foreign);
+}
+
+.fix-new[data-kind='frame'] {
+  background: var(--kind-frame);
+}
+
+.fix-new[data-kind='dialect'] {
+  background: var(--kind-dialect);
+}
+
+.fix-new[data-kind='pronoun'] {
+  background: var(--kind-pronoun);
+}
+
+.fix-new.picked {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The learner's words keep their blue; English is crossed out, other fixes underlined, in red. */
+.fix .fix-original {
+  color: var(--accent);
+  text-decoration: underline dotted var(--translation);
+  text-underline-offset: 4px;
+}
+
+.fix.crossed .fix-original {
+  text-decoration: line-through var(--translation) 2px;
+}
+
+/* Words on the page are buttons only to open their box: they look like the text around them. */
+.journal-text.annotated button.tip-trigger.change-mark,
+.journal-text.annotated button.tip-trigger.word-mark {
+  padding: 0;
+  font-weight: inherit;
+  color: inherit;
+  background: none;
+  line-height: inherit;
+}
+
+.journal-text.annotated button.tip-trigger.word-mark:hover,
+.journal-text.annotated button.tip-trigger.word-mark[aria-expanded='true'] {
+  background: var(--accent-soft);
+}
+
+/* The box opens under the word that was tapped. */
+.journal-text.annotated .change-wrap,
+.journal-text.annotated .word-wrap {
+  position: relative;
+}
+
+.journal-text.annotated .tip-box {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+/* Read-only pages let a word's box reach past the page's edge (pictures there are clamped anyway). */
+.journal-sheet:not(.editing) {
+  overflow: visible;
+}
+
+.journal-tap-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

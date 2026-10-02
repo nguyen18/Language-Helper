@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { objectUrl, type SheetItem } from '../lib/journal'
 import { useOutlines, useWidth, wrapFloats } from '../lib/textWrap'
 
@@ -33,9 +33,11 @@ type Props = {
   lang?: string
   label?: string
   apiRef?: RefObject<SheetApi | null>
+  /** Read-only: the text as rendered with Mai's corrections written over it, in place of plain `text`. */
+  richText?: ReactNode
 }
 
-export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, captionPlaceholder, lang, label, apiRef }: Props) {
+export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, captionPlaceholder, lang, label, apiRef, richText }: Props) {
   const editable = Boolean(onTextChange && onItemsChange)
   const sheetRef = useRef<HTMLDivElement>(null)
   const [sheet, setSheet] = useState<HTMLDivElement | null>(null)
@@ -176,8 +178,8 @@ export function JournalSheet({ text, items, onTextChange, onItemsChange, placeho
               apiRef={apiRef}
             />
           ) : (
-            <div className="journal-text" lang={lang}>
-              {text}
+            <div className={richText ? 'journal-text annotated' : 'journal-text'} lang={lang}>
+              {richText ?? text}
             </div>
           )}
         </div>

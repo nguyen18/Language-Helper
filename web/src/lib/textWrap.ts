@@ -12,6 +12,8 @@ import type { SheetItem } from './journal'
 const GAP_X = 10
 const GAP_Y = 6
 const CAPTION = 38
+// A photo's white frame (6px around, 18px below: .sheet-item.photo img), which its size doesn't include.
+const PHOTO_FRAME = { x: 12, y: 24 }
 // Rows the sticker outline is measured in.
 const ROWS = 24
 
@@ -92,11 +94,18 @@ export function wrapFloats(
   let lastTop = 0
   const sorted = [...items].sort((a, b) => a.y - b.y)
   for (const item of sorted) {
-    const x = item.x * width
-    const w = item.w * width
-    const h = item.w * item.aspect * width
+    // The picture's box as drawn: a photo's frame added, and a tilted picture's upright bounding box.
+    const frame = item.kind === 'photo' ? PHOTO_FRAME : { x: 0, y: 0 }
+    const w0 = item.w * width + frame.x
+    const h0 = item.w * item.aspect * width + frame.y
+    const angle = (Math.abs(item.rotation) * Math.PI) / 180
+    const w = w0 * Math.abs(Math.cos(angle)) + h0 * Math.abs(Math.sin(angle))
+    const h = w0 * Math.abs(Math.sin(angle)) + h0 * Math.abs(Math.cos(angle))
+    // Rotation is around the centre, so the bounding box grows equally on both sides.
+    const x = item.x * width - (w - item.w * width) / 2
+    const yTop = item.y * width - (h - h0) / 2
     const side = x + w / 2 < width / 2 ? 'left' : 'right'
-    const top = Math.max(0, item.y * width - GAP_Y)
+    const top = Math.max(0, yTop - GAP_Y)
     const height = h + GAP_Y * 2 + (withCaption(item) ? CAPTION : 0)
     // The spacer starts where its side's last picture ended (or the previous float's top, if lower).
     const start = Math.max(bottom[side], lastTop)
