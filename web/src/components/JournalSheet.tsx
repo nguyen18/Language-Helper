@@ -288,7 +288,9 @@ function Caption({ item, lang }: { item: SheetItem; lang?: string }) {
   const fixed = check && check.corrected.trim() !== caption.trim() ? check : undefined
   return (
     <p className="item-caption" lang={lang} title={fixed?.changes.map((c) => c.why).join(' ')}>
-      <CaptionArrow />
+      <span className="caption-arrow" aria-hidden="true">
+        ↳
+      </span>
       {fixed ? (
         <>
           <s>{caption}</s> <strong className="caption-fix">{fixed.corrected}</strong>
@@ -419,16 +421,5 @@ function EditableText({ text, onChange, lang, label, placeholder, sheetRef, apiR
       }}
       onPointerDown={(e) => e.stopPropagation()}
     />
-  )
-}
-
-// A hand-drawn arrow from the caption up to its picture: a rounded line with a little loop in the middle.
-function CaptionArrow() {
-  return (
-    <svg className="caption-arrow" viewBox="-1 -1 26 38" aria-hidden="true">
-      <path d="M6 34 C 6 28, 14 27, 16 22 C 18 17, 10 14, 9 19 C 8 24, 18 22, 17 14 C 16.5 10, 14 7, 12 3" />
-      {/* The head follows the line's direction at its tip. */}
-      <path d="M11.5 6.6 L 12 3 L 15.2 4.7" />
-    </svg>
   )
 }

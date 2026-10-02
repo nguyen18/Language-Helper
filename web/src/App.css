@@ -2503,17 +2503,8 @@ button.make-sticker {
 }
 
 .caption-arrow {
-  display: inline-block;
-  width: 1.15em;
-  height: 1.75em;
-  margin-right: 2px;
-  vertical-align: -0.45em;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.8;
+  margin-right: 3px;
+  opacity: 0.7;
 }
 
 .item-caption s {
@@ -2952,4 +2943,11 @@ div.audio-bar {
 .journal-page .sheet-item.photo img {
   border: none;
   box-shadow: none;
+}
+
+/* Stickers: no shadow; a thin blue outline that follows the cut-out's edge (four hard drop-shadows), owner's
+   feedback 2026-10-01. */
+.sheet-item.sticker img {
+  filter: drop-shadow(1.5px 0 0 var(--accent)) drop-shadow(-1.5px 0 0 var(--accent))
+    drop-shadow(0 1.5px 0 var(--accent)) drop-shadow(0 -1.5px 0 var(--accent));
 }
