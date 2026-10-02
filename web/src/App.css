@@ -2583,3 +2583,25 @@ button.sticker-way {
 .sticker-way .muted {
   font-size: 0.85rem;
 }
+
+/* Weekday names: short on a phone ("CN"), full on wider screens ("Chủ Nhật"). Full names can be long in
+   some languages, so they wrap within their column. */
+.weekday-long {
+  display: none;
+}
+
+@media (min-width: 601px) {
+  .weekday-short {
+    display: none;
+  }
+
+  .weekday-long {
+    display: inline;
+  }
+
+  .entry-week li {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+}

@@ -17,7 +17,7 @@ type EntryHeadProps = {
 export function EntryHead({ when, date, label, lang, children }: EntryHeadProps) {
   return (
     <div className="entry-head">
-      <div className="entry-date-row">
+      <div className="entry-date-row" dir={date.dir}>
         <span className="entry-date-label">Date</span>
         {children ?? (
           <time dateTime={when} className="entry-date" lang={lang} title={date.english}>
@@ -26,10 +26,12 @@ export function EntryHead({ when, date, label, lang, children }: EntryHeadProps)
         )}
         {label && <span className="language-tag">{label}</span>}
       </div>
-      <ol className="entry-week" aria-label="Week">
+      {/* Short names on a phone ("CN"), full ones on wider screens ("Chủ Nhật"); CSS picks one. */}
+      <ol className="entry-week" aria-label="Week" dir={date.dir}>
         {date.week.map((d, i) => (
           <li key={i} className={d.today ? 'today' : undefined} lang={lang} title={d.long} aria-current={d.today ? 'date' : undefined}>
-            {d.label}
+            <span className="weekday-short">{d.label}</span>
+            <span className="weekday-long">{d.long}</span>
           </li>
         ))}
       </ol>

@@ -403,9 +403,10 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
           ),
         )}
       </p>
-      {/* Changes and picks show in the sentence itself (tap one for why); only what needs the learner is
-          listed: tips to use, and words Mai couldn't correct. */}
-      {(hints.length > 0 || sentence.unchecked.length > 0) && (
+      {/* Changes and picks show in the sentence itself (tap one for why); only tips to use are listed.
+          ("Couldn't correct" notes for unchecked words were removed: the review can take a Vietnamese word
+          typed without accents for English, so they could be wrong.) */}
+      {hints.length > 0 && (
         <ul className="journal-notes">
           {hints.map((h) => (
             <li key={h.key} className="journal-tip">
@@ -413,11 +414,6 @@ function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord,
               <button type="button" className="chip" onClick={() => onAcceptHint(h.key)}>
                 Use “{h.suggestions[0]}”
               </button>
-            </li>
-          ))}
-          {sentence.unchecked.map((u, i) => (
-            <li key={`u-${i}`} className="journal-tip">
-              Couldn't correct “{u}”: no {target.label} word found, so it's left as written.
             </li>
           ))}
         </ul>
