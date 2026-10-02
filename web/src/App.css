@@ -2285,6 +2285,20 @@ button.icon-button:active {
   font-size: 0.75rem;
 }
 
+/* iOS Safari draws date inputs as centered buttons; keep the date on the left, like the saved page's. */
+.editor-date .journal-when {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 1.6em;
+  text-align: left;
+}
+
+.editor-date .journal-when::-webkit-date-and-time-value {
+  margin: 0;
+  text-align: left;
+}
+
 .editor-audio-note {
   margin-top: 8px;
   font-size: 0.85rem;
