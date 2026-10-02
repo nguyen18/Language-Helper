@@ -27,6 +27,7 @@ import type { CheatsheetEntry, Meaning } from '../lib/cheatsheet'
 import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/languages'
 import { entryFor } from '../lib/translateWords'
 import { entryDate } from '../lib/journalDates'
+import { EntryHead } from '../components/EntryHead'
 import { loadJournalFont } from '../lib/journalFont'
 import { loadWordOptions, type WordAlternatives } from '../lib/wordOptions'
 
@@ -752,33 +753,3 @@ function WordAlternativesBox({ word, shown, onPick, target, tag = 'your word', s
   )
 }
 
-type EntryHeadProps = {
-  when: string
-  date: ReturnType<typeof entryDate>
-  /** The entry's language, shown only when it isn't the one being learned now. */
-  label?: string
-  lang: string
-}
-
-// An entry's header, like a zine page's: a bordered "Date" row in the language being learned (the English
-// on hover), and the week with the entry's day circled.
-export function EntryHead({ when, date, label, lang }: EntryHeadProps) {
-  return (
-    <div className="entry-head">
-      <div className="entry-date-row">
-        <span className="entry-date-label">Date</span>
-        <time dateTime={when} className="entry-date" lang={lang} title={date.english}>
-          {date.date} · {date.time}
-        </time>
-        {label && <span className="language-tag">{label}</span>}
-      </div>
-      <ol className="entry-week" aria-label="Week">
-        {date.week.map((d, i) => (
-          <li key={i} className={d.today ? 'today' : undefined} lang={lang} title={d.long} aria-current={d.today ? 'date' : undefined}>
-            {d.label}
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
