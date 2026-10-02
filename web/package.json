@@ -12,6 +12,7 @@
     "mirror-data": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/mirror-data.ts"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "fflate": "^0.8.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

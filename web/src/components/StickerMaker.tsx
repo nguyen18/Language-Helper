@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { cutOutSticker, loadImage, shrinkImage, type Point } from '../lib/images'
+import { cutOutMask, cutOutSticker, loadImage, shrinkImage, type Point } from '../lib/images'
+import { liftAt, loadLifter, type LiftMask } from '../lib/lift'
 
 // Makes a sticker, three ways (owner's request 2026-10-01: trace, or the iPhone's own cut-out):
-// - lift it with the iPhone: pick a photo, which is shown large as a plain image, so iOS lets you touch and
-//   hold its subject and tap Copy Subject (or drag it onto the box); "Paste sticker" then takes the
-//   clipboard's picture, see-through background and all (Clipboard API, which asks with a Paste bubble;
-//   needs https). A cut-out already copied in Photos can be pasted straight away, or onto the page;
+// - lift it out of a photo: pick a photo and tap the thing you want; MediaPipe's interactive segmenter
+//   outlines it (lib/lift.ts, on the device, any browser), and it's cut out with a white border. (Showing
+//   the photo for iOS's touch-and-hold Copy Subject didn't work in Safari, owner's report 2026-10-01.)
+// - paste one already copied (a subject copied in the Photos app, see-through background and all; Clipboard
+//   API, which asks with a Paste bubble and needs https), or paste onto the page itself (JournalEditor);
 // - trace it: pick a photo and draw around the part you want; it's cut out with a white border;
 // - use a picture that's already cut out (a PNG with a see-through background) as it is.
 
@@ -34,9 +36,66 @@ export function StickerMaker({ onDone, onCancel }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const wholeRef = useRef<HTMLInputElement>(null)
   const liftRef = useRef<HTMLInputElement>(null)
-  // The photo shown for lifting a subject out of, as an object URL.
-  const [liftUrl, setLiftUrl] = useState<string | null>(null)
-  useEffect(() => () => void (liftUrl && URL.revokeObjectURL(liftUrl)), [liftUrl])
+  // Tap-to-lift: the photo (a working copy), the lifted part's mask, and what's happening.
+  const [liftImg, setLiftImg] = useState<HTMLImageElement | null>(null)
+  const [liftMask, setLiftMask] = useState<LiftMask | null>(null)
+  const [liftStatus, setLiftStatus] = useState<'loading' | 'ready' | 'lifting'>('loading')
+  const liftCanvasRef = useRef<HTMLCanvasElement>(null)
+
+  // The photo, dimmed outside the lifted part once there is one.
+  useEffect(() => {
+    const canvas = liftCanvasRef.current
+    if (!canvas || !liftImg) return
+    canvas.width = liftImg.naturalWidth
+    canvas.height = liftImg.naturalHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(liftImg, 0, 0)
+    if (!liftMask) return
+    const shade = document.createElement('canvas')
+    shade.width = liftMask.width
+    shade.height = liftMask.height
+    const pixels = new ImageData(liftMask.width, liftMask.height)
+    for (let i = 0; i < liftMask.data.length; i++) {
+      pixels.data[i * 4] = 35
+      pixels.data[i * 4 + 1] = 37
+      pixels.data[i * 4 + 2] = 110
+      pixels.data[i * 4 + 3] = liftMask.data[i] ? 0 : 150
+    }
+    shade.getContext('2d')!.putImageData(pixels, 0, 0)
+    ctx.drawImage(shade, 0, 0, canvas.width, canvas.height)
+  }, [liftImg, liftMask])
+
+  const pickToLift = async (f: File) => {
+    setError(null)
+    setLiftMask(null)
+    try {
+      const working = await shrinkImage(f, WORKING_SIZE, 'image/png')
+      setLiftImg(await loadImage(working.blob))
+      setLiftStatus('loading')
+      await loadLifter()
+      setLiftStatus('ready')
+    } catch {
+      setLiftStatus('ready')
+      setError("Couldn't load the lifting tool. Check your connection, or trace it yourself instead.")
+    }
+  }
+
+  const tapToLift = async (e: PointerEvent<HTMLCanvasElement>) => {
+    if (!liftImg || liftStatus === 'lifting') return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    setError(null)
+    setLiftStatus('lifting')
+    try {
+      const mask = await liftAt(liftImg, x, y)
+      if (!mask.data.some(Boolean)) throw new Error("Couldn't find anything there. Try tapping the middle of it.")
+      setLiftMask(mask)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+    setLiftStatus('ready')
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel()
@@ -186,10 +245,7 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0]
-            if (f) {
-              setError(null)
-              setLiftUrl(URL.createObjectURL(f))
-            }
+            if (f) void pickToLift(f)
             e.target.value = ''
           }}
         />
@@ -204,28 +260,23 @@ export function StickerMaker({ onDone, onCancel }: Props) {
             e.target.value = ''
           }}
         />
-        {liftUrl ? (
-          // A plain <img>, so iOS offers Copy Subject on touch and hold (a canvas wouldn't); a lifted subject
-          // dragged onto the box works too.
-          <div
-            className="lift-stage"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'))
-              if (!file) return
-              e.preventDefault()
-              void keepWhole(file)
-            }}
-          >
+        {liftImg ? (
+          <>
             <p className="muted">
-              Touch and hold the part you want until it glows, tap <strong>Copy Subject</strong> (or <strong>Copy</strong>),
-              then tap <strong>Paste sticker</strong>.
+              {liftStatus === 'loading'
+                ? 'Getting the lifting tool ready… (the first time takes a moment)'
+                : liftStatus === 'lifting'
+                  ? 'Lifting it out…'
+                  : liftMask
+                    ? 'Happy with it? Make the sticker, or tap something else.'
+                    : 'Tap the thing you want to lift out.'}
             </p>
-            <img className="lift-photo" src={liftUrl} alt="The photo to lift a sticker out of" />
-            <button type="button" className="primary lift-paste" onClick={pasteCutOut} disabled={busy}>
-              📋 Paste sticker
-            </button>
-          </div>
+            <canvas
+              ref={liftCanvasRef}
+              className={liftStatus === 'ready' ? 'sticker-canvas' : 'sticker-canvas busy'}
+              onPointerUp={tapToLift}
+            />
+          </>
         ) : img ? (
           <>
             <p className="muted">
@@ -246,12 +297,10 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           <div className="sticker-ways">
             <button type="button" className="sticker-way" onClick={() => liftRef.current?.click()} disabled={busy}>
               <span className="sticker-way-icon" aria-hidden="true">
-                📋
+                🪄
               </span>
               <strong>Lift it out of a photo</strong>
-              <span className="muted">
-                Pick a photo, then touch and hold the part you want until it lifts (iPhone), and paste it here.
-              </span>
+              <span className="muted">Pick a photo, then tap the thing you want: it's cut out for you.</span>
             </button>
             <button type="button" className="sticker-way" onClick={() => fileRef.current?.click()} disabled={busy}>
               <span className="sticker-way-icon" aria-hidden="true">
@@ -274,14 +323,33 @@ export function StickerMaker({ onDone, onCancel }: Props) {
           <button type="button" onClick={onCancel}>
             Cancel
           </button>
-          {!img && !liftUrl && (
+          {!img && !liftImg && (
             <button type="button" onClick={pasteCutOut} disabled={busy}>
               Paste one I already copied
             </button>
           )}
-          {liftUrl && (
+          {liftImg && (
             <button type="button" onClick={() => liftRef.current?.click()}>
               Another photo
+            </button>
+          )}
+          {liftImg && (
+            <button
+              type="button"
+              className="primary"
+              disabled={!liftMask || busy}
+              onClick={async () => {
+                if (!liftImg || !liftMask) return
+                setBusy(true)
+                try {
+                  onDone(await cutOutMask(liftImg, liftMask))
+                } catch (err) {
+                  setError((err as Error).message)
+                  setBusy(false)
+                }
+              }}
+            >
+              Make sticker
             </button>
           )}
           {img && (
