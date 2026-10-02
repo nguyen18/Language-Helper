@@ -222,29 +222,37 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
         </section>
       )}
 
-      <nav className="editor-toolbar" aria-label="Add to your entry">
-        <button type="button" onClick={() => photoRef.current?.click()}>
-          <span aria-hidden="true">📷</span>
-          Photo
-        </button>
-        <input
-          ref={photoRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => {
-            void addPhoto(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
-        {(['stickers', 'frames', 'audio'] as const).map((p) => (
-          <button key={p} type="button" aria-pressed={panel === p} onClick={() => toggle(p)}>
-            <span aria-hidden="true">{PANEL_ICONS[p]}</span>
-            {PANEL_SHORT[p]}
-            {p === 'audio' && audio && <span className="toolbar-dot" aria-label="(added)" />}
+      <div className="editor-toolbar-area">
+        {/* A nudge to read the entry aloud: once there's writing and no recording yet. */}
+        {text.trim() && !audio && panel !== 'audio' && (
+          <button type="button" className="record-nudge" onClick={() => setPanel('audio')}>
+            Now read it out loud! Tap to record yourself 🎙
           </button>
-        ))}
-      </nav>
+        )}
+        <nav className="editor-toolbar" aria-label="Add to your entry">
+          <button type="button" onClick={() => photoRef.current?.click()}>
+            <span aria-hidden="true">📷</span>
+            Photo
+          </button>
+          <input
+            ref={photoRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              void addPhoto(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+          {(['stickers', 'frames', 'audio'] as const).map((p) => (
+            <button key={p} type="button" aria-pressed={panel === p} onClick={() => toggle(p)}>
+              <span aria-hidden="true">{PANEL_ICONS[p]}</span>
+              {PANEL_SHORT[p]}
+              {p === 'audio' && audio && <span className="toolbar-dot" aria-label="(added)" />}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {makingSticker && <StickerMaker onDone={keepSticker} onCancel={() => setMakingSticker(false)} />}
     </section>

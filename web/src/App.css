@@ -2976,3 +2976,50 @@ div.audio-bar {
     min-height: 100%;
   }
 }
+
+/* A speech bubble over the toolbar's Audio button, reminding the learner to record themselves reading the
+   entry (owner's request); its tail points down at the button (the last of four). */
+.editor-toolbar-area {
+  position: relative;
+}
+
+button.record-nudge {
+  position: absolute;
+  right: 6px;
+  bottom: calc(100% + 10px);
+  z-index: 2;
+  display: block;
+  max-width: 220px;
+  padding: 8px 12px;
+  font-family: var(--display, system-ui);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--text);
+  background: var(--blush);
+  border: 1.5px solid var(--text);
+  border-radius: 12px;
+  box-shadow: 2px 2px 0 var(--text);
+}
+
+/* The tail: a small diamond's lower half, over the Audio button's middle (an eighth of the bar from the right). */
+button.record-nudge::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  right: calc(12.5vw - 6px - 6px);
+  width: 12px;
+  height: 12px;
+  background: var(--blush);
+  border-right: 1.5px solid var(--text);
+  border-bottom: 1.5px solid var(--text);
+  transform: rotate(45deg);
+}
+
+@media (min-width: 601px) {
+  /* On wider screens the toolbar is the editor's width (at most 680px), not the screen's. */
+  button.record-nudge::after {
+    right: calc(min(680px, 100vw - 32px) / 8 - 12px);
+  }
+}
