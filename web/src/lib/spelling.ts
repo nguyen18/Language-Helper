@@ -276,3 +276,10 @@ export function joinedWordsIn(text: string, sentence: ReviewSentence): { start: 
   }
   return found.sort((a, b) => a.start - b.start)
 }
+
+// Letters without accents, lowercase ("Rất" → "rat", "đi" → "di").
+const bareLetters = (s: string) =>
+  s.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+
+/** Whether two words have the same letters, accents aside: "rat" and "rất". */
+export const sameLetters = (a: string, b: string) => bareLetters(a) === bareLetters(b)

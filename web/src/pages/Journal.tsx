@@ -15,6 +15,7 @@ import {
   reviewNotes,
   alignSentence,
   joinedWordsIn,
+  sameLetters,
   shownWord,
   wordTokens,
   withAcceptedHints,
@@ -418,16 +419,20 @@ function ChangeMark({ change, original, shown, onPick, target }: ChangeMarkProps
   // Every correction to a word can be looked at and changed: English words through their Cheatsheet entry,
   // the others through the spellchecker's options and the word's own alternatives. Frame clauses can't.
   const choosable = change.kind === 'foreign-word' || (change.kind !== 'frame' && Boolean(change.to))
+  const english = change.kind === 'foreign-word' || change.kind === 'frame'
+  const meantTarget = english && original !== undefined && Boolean(shown) && sameLetters(original, shown)
   return (
     <Popover
       title={`${change.from} → ${shown}`}
       trigger={
         original !== undefined ? (
           // English (a word, or a clause a frame filled in) is crossed out; other fixes keep the original.
-          <ruby className={change.kind === 'foreign-word' || change.kind === 'frame' ? 'fix crossed' : 'fix'}>
+          // A pick with the same letters ("rat" → "rất": the learner meant a Vietnamese word) is an accent fix,
+          // tinted and drawn like one; other English stays crossed out.
+          <ruby className={meantTarget ? 'fix' : english ? 'fix crossed' : 'fix'}>
             <span className="fix-original">{original}</span>
             {/* A word left out ("the") is only crossed out: nothing goes above it. */}
-            <rt className="fix-new" data-kind={shown ? kind.color : undefined}>
+            <rt className="fix-new" data-kind={shown ? (meantTarget ? kindOf('spelling').color : kind.color) : undefined}>
               {shown}
             </rt>
           </ruby>
@@ -571,9 +576,19 @@ function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkPr
         lang={target.code}
       />
     ) : null
+  // The learner may have meant a word of the language typed without accents ("rat": rất, very), which the
+  // review took for English: offer those too.
+  const meant = <MeantInTarget word={change.from} shown={shown} onPick={onPick} target={target} />
   if (entry === undefined) return <p className="muted">Looking up “{change.from}”…</p>
   const meanings = entry?.meanings.filter((m) => m.options.length > 0) ?? []
-  if (!meanings.length) return fallback
+  if (!meanings.length) {
+    return (
+      <>
+        {fallback}
+        {meant}
+      </>
+    )
+  }
 
   // The meaning the sentence uses: the one holding the shown word, else the one holding Mai's word.
   const holds = (m: Meaning, w: string) => m.options.some((o) => o.text.toLowerCase() === w.toLowerCase())
@@ -615,6 +630,29 @@ function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkPr
           </ul>
         </details>
       )}
+      {meant}
+    </>
+  )
+}
+
+// "Did you mean a Vietnamese word?": the words of the language spelled with the same letters as the one Mai
+// took for English, with their meanings ("rat": rất "very", rát "burning"…). Nothing when there are none.
+function MeantInTarget({ word, shown, onPick, target }: { word: string; shown: string; onPick: (w: string) => void; target: TargetLanguage }) {
+  const [accents, setAccents] = useState<WordOption[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    loadWordOptions(target, word)
+      .then((o) => !cancelled && setAccents(o?.accents ?? []))
+      .catch(() => !cancelled && setAccents([]))
+    return () => {
+      cancelled = true
+    }
+  }, [target, word])
+  if (!accents?.length) return null
+  return (
+    <>
+      <p className="tip-note-label word-options-label">Or did you mean a {target.language} word?</p>
+      <WordOptions words={accents} shown={shown} reviewWord="" onPick={onPick} lang={target.code} />
     </>
   )
 }
