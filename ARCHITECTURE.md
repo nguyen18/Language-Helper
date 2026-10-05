@@ -239,6 +239,7 @@ The notes originally planned to rely on the phone keyboard's built-in dictation 
 
 ## Working conventions for this repo
 
+- **No LLM features** (owner's decision, 2026-10-01; see `NOTES.md`). Features are rule-based and data-driven, from which-dialect's data (dictionary, pronoun table, picks, sentence frames, checker), with no API costs or LLM dependency. Don't propose AI rewrite buttons, LLM fallbacks or "needs AI" paths; when rules can't handle something, say so and fall back to hints. The planned Claude calls described above (the stack, AI-written Mai replies, the backend plan) are on hold: leave them as history, don't build on them.
 - TypeScript everywhere, per the planned stack.
 - **Record product decisions in `NOTES.md`** (the owner asks for this) and code-level details here. When a decision is reversed, say so in both, rather than silently deleting the old one.
 - Every word counts in the top 100. Don't add filtering (nouns, stopwords) without the owner asking.

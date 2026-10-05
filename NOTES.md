@@ -6,6 +6,8 @@ Running notes for ideas and planning before (and during) the build.
 
 ## Decisions so far
 
+- **No LLM features (owner, 2026-10-01).** This reverses the LLM parts of the plan below (Claude tagging and equivalents in the analysis, Claude API calls from the backend, AI follow-up questions and corrections): Language Helper's features are rule-based and data-driven (which-dialect's dictionary, pronoun table, picks, sentence frames and checker), with no API costs or LLM dependency. Where rules can't handle something, say so and fall back to hints. The older notes stay for history; don't build new features on them.
+
 - **Input method:** Guided questions / conversational prompts. Users answer in a text box that supports native keyboard dictation (speak or type), then edit before submitting.
   - Autocorrect/spellcheck off in the answer box to preserve slang.
   - Native dictation usually keeps lexical fillers ("like", "you know", "I mean") but drops hesitation sounds ("um", "uh") → offer quick-insert chips for "um"/"uh".
