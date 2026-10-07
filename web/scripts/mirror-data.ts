@@ -3,6 +3,10 @@
 //   npm run mirror-data                  (from web/; to the local Supabase started with `npx supabase start`)
 //   SUPABASE_URL=… SUPABASE_SECRET_KEY=… npm run mirror-data      (to a hosted project)
 //
+// For a hosted project, SUPABASE_SECRET_KEY must be the legacy `service_role` key (a JWT): hosted Storage
+// rejects the new `sb_secret_…` keys in the Authorization header ("Invalid Compact JWS"). The local
+// Supabase accepts either.
+//
 // Why: the functions look words up as they go. Loading the data from the jsDelivr CDN made translating a
 // word ~20 s, because files nobody had asked for recently take ~1 s each and a word needs dozens of them in
 // a row. From Storage, next to the functions, every file is fast.
@@ -90,15 +94,22 @@ async function main() {
       Array.from({ length: PARALLEL }, async () => {
         for (let path = queue.shift(); path; path = queue.shift()) {
           const name = `${folder}/${relative(data, path)}`
-          const res = await fetch(`${url}/storage/v1/object/${BUCKET}/${name}`, {
-            method: 'POST',
-            headers: { ...headers, 'content-type': 'application/json', 'x-upsert': 'false' },
-            body: await readFile(path),
-          })
-          if (!res.ok) {
+          const body = await readFile(path)
+          // Hosted Storage answers the odd upload with a 500 under this many parallel requests: try again.
+          for (let attempt = 1; ; attempt++) {
+            const res = await fetch(`${url}/storage/v1/object/${BUCKET}/${name}`, {
+              method: 'POST',
+              headers: { ...headers, 'content-type': 'application/json', 'x-upsert': 'false' },
+              body,
+            })
+            if (res.ok) break
             const text = await res.text()
-            if (res.status === 409 || text.includes('already exists') || text.includes('Duplicate')) skipped++
-            else throw new Error(`Uploading ${name} failed (${res.status}): ${text}`)
+            if (res.status === 409 || text.includes('already exists') || text.includes('Duplicate')) {
+              skipped++
+              break
+            }
+            if (res.status < 500 || attempt === 4) throw new Error(`Uploading ${name} failed (${res.status}): ${text}`)
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
           }
           if (++done % 1000 === 0) console.log(`  ${folder}: ${done}/${paths.length}`)
         }
