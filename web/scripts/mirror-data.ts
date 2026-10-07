@@ -2,6 +2,7 @@
 //
 //   npm run mirror-data                  (from web/; to the local Supabase started with `npx supabase start`)
 //   SUPABASE_URL=… SUPABASE_SECRET_KEY=… npm run mirror-data      (to a hosted project)
+//   npm run mirror-data -- --if-missing  (skip data sets already marked complete; what scripts/local.sh runs)
 //
 // For a hosted project, SUPABASE_SECRET_KEY must be the legacy `service_role` key (a JWT): hosted Storage
 // rejects the new `sb_secret_…` keys in the Authorization header ("Invalid Compact JWS"). The local
@@ -30,6 +31,10 @@ const DATA_SETS: { lang: string; version: string }[] = [
   { lang: 'vi', version: '0.1.7' },
 ]
 const BUCKET = 'which-dialect'
+// Uploaded into a data set's folder once all its files are there, so --if-missing can skip the set without
+// trying every file again (a full pass of "already exists" answers takes a while).
+const COMPLETE = '_complete.json'
+const IF_MISSING = process.argv.includes('--if-missing')
 const PARALLEL = 24
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -85,6 +90,13 @@ async function main() {
 
   for (const { lang, version } of DATA_SETS) {
     const folder = `${lang}@${version}`
+    if (IF_MISSING) {
+      const marker = await fetch(`${url}/storage/v1/object/public/${BUCKET}/${folder}/${COMPLETE}`)
+      if (marker.ok) {
+        console.log(`${folder}: already complete`)
+        continue
+      }
+    }
     const data = packageData(lang, version)
     const paths = await files(data)
     let done = 0
@@ -115,6 +127,12 @@ async function main() {
         }
       }),
     )
+    const marked = await fetch(`${url}/storage/v1/object/${BUCKET}/${folder}/${COMPLETE}`, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json', 'x-upsert': 'true' },
+      body: JSON.stringify({ files: paths.length, at: new Date().toISOString() }),
+    })
+    if (!marked.ok) throw new Error(`Marking ${folder} complete failed (${marked.status}): ${await marked.text()}`)
     console.log(`${folder}: ${paths.length} files (${skipped} were already there)`)
   }
 }
