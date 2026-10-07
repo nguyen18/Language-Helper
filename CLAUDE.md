@@ -7,7 +7,7 @@ Read `ARCHITECTURE.md` first (the project's deep-dive doc; keep it updated after
 - **Stage explicit paths, never `git add -A`.** `supabase/.temp/start-secrets/.../docker.env` holds local
   secrets. On 2026-10-01 a `git add -A` on a branch without `supabase/.gitignore` swept it into a commit
   and GitHub push protection rejected the push. `supabase/.gitignore` (ignoring `.temp` and `.branches`)
-  is on `main` now, but branches older than that still lack it, and a commit tracking those files
+  is on `master` now, but branches older than that still lack it, and a commit tracking those files
   deletes them from disk when you switch off it.
 - **Translations come from which-dialect** (`~/dev/which-dialect`, the npm package `which-dialect`):
   the Cheatsheet is generated with it (`npm run cheatsheet`; data from the jsDelivr CDN, or a local
