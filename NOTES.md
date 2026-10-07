@@ -1,4 +1,4 @@
-# Language Helper — Planning Notes
+# Mai (mai-tutor) — Planning Notes
 
 Running notes for ideas and planning before (and during) the build.
 
@@ -6,7 +6,7 @@ Running notes for ideas and planning before (and during) the build.
 
 ## Decisions so far
 
-- **No LLM features (owner, 2026-10-01).** This reverses the LLM parts of the plan below (Claude tagging and equivalents in the analysis, Claude API calls from the backend, AI follow-up questions and corrections): Language Helper's features are rule-based and data-driven (which-dialect's dictionary, pronoun table, picks, sentence frames and checker), with no API costs or LLM dependency. Where rules can't handle something, say so and fall back to hints. The older notes stay for history; don't build new features on them.
+- **No LLM features (owner, 2026-10-01).** This reverses the LLM parts of the plan below (Claude tagging and equivalents in the analysis, Claude API calls from the backend, AI follow-up questions and corrections): Mai's features are rule-based and data-driven (which-dialect's dictionary, pronoun table, picks, sentence frames and checker), with no API costs or LLM dependency. Where rules can't handle something, say so and fall back to hints. The older notes stay for history; don't build new features on them.
 
 - **Input method:** Guided questions / conversational prompts. Users answer in a text box that supports native keyboard dictation (speak or type), then edit before submitting.
   - Autocorrect/spellcheck off in the answer box to preserve slang.
@@ -113,7 +113,7 @@ Scope: only the **Personal Word List Discoverer** (named 2026-09-27): the featur
 Decided 2026-09-27: **build our own openly licensed slang dictionary** as part of which-dialect, rather than using an existing one. Not started; noted here for later.
 
 - **Why:** no open slang dictionary covers English, Spanish and Vietnamese. Urban Dictionary (English only) and printed slang dictionaries (Green's Dictionary of Slang, Diccionario de americanismos, Vietnamese slang books) are copyrighted and can't go into an open-source package; Urban Dictionary is also unvetted. Wiktionary's slang labels are already in which-dialect, but coverage is uneven (as of 2026-09-27: English ~20,900 slang senses, Spanish ~970, Vietnamese only ~340, mostly texting shorthand like *a* = anh, *ae* = anh em).
-- **Idea:** collect the slang people actually use (Language Helper's custom lists already gather users' own words), add a "suggest a word" flow, and publish the results as an openly licensed slang file in which-dialect, per language and region, in the same format as the dictionary data so translation picks it up automatically. Needs a review step, since slang submissions can be jokes or offensive.
+- **Idea:** collect the slang people actually use (Mai's custom lists already gather users' own words), add a "suggest a word" flow, and publish the results as an openly licensed slang file in which-dialect, per language and region, in the same format as the dictionary data so translation picks it up automatically. Needs a review step, since slang submissions can be jokes or offensive.
 - **Also worth doing:** contribute well-sourced slang back to Wiktionary (it flows into which-dialect on the next rebuild), and check community Vietnamese *teencode* lists or research datasets (e.g. ViLexNorm) for a clear open license (MIT/CC) to fill the texting-spelling gap. Licenses must be checked one by one before reusing anything.
 
 ## Open questions

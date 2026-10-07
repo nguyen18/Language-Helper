@@ -1,4 +1,4 @@
-# Language Helper
+# Mai (mai-tutor)
 
 Read `ARCHITECTURE.md` first (the project's deep-dive doc; keep it updated after major changes) and
 `NOTES.md` for product decisions.

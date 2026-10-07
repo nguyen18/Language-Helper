@@ -36,7 +36,7 @@ export function contractionParts(word: string): [string, string] | null {
 // translated.
 const HELPERS = new Set(['do', 'does', 'did'])
 // Which sense of each part to translate. Anything not listed is a pronoun ("I", "it", "we"…), translated
-// in a casual register (Language Helper is about casual chat: Southern "tui" for "I") with more options,
+// in a casual register (Mai is about casual chat: Southern "tui" for "I") with more options,
 // since the right pronoun depends on who you're talking to.
 type PartHint = { pos: string; meaning?: string; register?: 'casual' | 'neutral' | 'polite' }
 const PRONOUN_HINT: PartHint = { pos: 'pron', register: 'casual' }

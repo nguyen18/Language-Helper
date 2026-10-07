@@ -6,7 +6,7 @@ import { ROUTE_HREF } from '../lib/useRoute'
 import { dictationSupported, useDictation } from '../lib/useDictation'
 import maiAvatar from '../assets/mai-placeholder.png'
 
-const STORAGE_KEY = 'language-helper:chat'
+const STORAGE_KEY = 'mai-tutor:chat'
 const FILLER_CHIPS = ['um', 'uh']
 
 type SavedState = {

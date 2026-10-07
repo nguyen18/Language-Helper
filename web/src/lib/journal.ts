@@ -38,7 +38,9 @@ export type JournalEntry = {
 
 export type Sticker = { id: string; image: Blob; aspect: number; createdAt: string }
 
-const DB_NAME = 'language-helper'
+const DB_NAME = 'mai-tutor'
+// Before 2026-10-07's rename, the app was "Language Helper" and so was its database.
+const OLD_DB_NAME = 'language-helper'
 const ENTRIES = 'journal-entries'
 // Before 2026-10-01's rename, the journal was the "diary".
 const OLD_ENTRIES = 'diary-entries'
@@ -46,9 +48,9 @@ const STICKERS = 'stickers'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
-function db(): Promise<IDBDatabase> {
-  dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2)
+function open(name: string): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, 2)
     req.onupgradeneeded = (e) => {
       const db = req.result
       if (e.oldVersion < 1) db.createObjectStore(STICKERS, { keyPath: 'id' })
@@ -63,19 +65,54 @@ function db(): Promise<IDBDatabase> {
         }
       }
     }
-    req.onsuccess = () => {
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+const done = (tx: IDBTransaction) =>
+  new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+    tx.onabort = () => reject(tx.error)
+  })
+
+// Copies the journal from the old database into `to`, then deletes the old one. `add` skips records `to`
+// already has, so a copy cut short and redone on the next load doesn't overwrite newer edits.
+async function moveOldDb(to: IDBDatabase) {
+  const dbs = await indexedDB.databases?.().catch(() => undefined)
+  if (!dbs?.some((d) => d.name === OLD_DB_NAME)) return
+  const from = await open(OLD_DB_NAME)
+  const read = from.transaction([ENTRIES, STICKERS], 'readonly')
+  const entries = read.objectStore(ENTRIES).getAll()
+  const stickers = read.objectStore(STICKERS).getAll()
+  await done(read)
+  from.close()
+  const write = to.transaction([ENTRIES, STICKERS], 'readwrite')
+  for (const [store, req] of [[ENTRIES, entries], [STICKERS, stickers]] as const) {
+    for (const record of req.result) write.objectStore(store).add(record).onerror = (e) => e.preventDefault()
+  }
+  await done(write)
+  indexedDB.deleteDatabase(OLD_DB_NAME)
+}
+
+function db(): Promise<IDBDatabase> {
+  dbPromise ??= open(DB_NAME).then(
+    async (db) => {
       // Let go when another tab upgrades or deletes the database, instead of blocking it.
-      req.result.onversionchange = () => {
-        req.result.close()
+      db.onversionchange = () => {
+        db.close()
         dbPromise = null
       }
-      resolve(req.result)
-    }
-    req.onerror = () => {
+      // Best effort: on failure the old database stays and the next load tries again.
+      await moveOldDb(db).catch(() => {})
+      return db
+    },
+    (error) => {
       dbPromise = null
-      reject(req.error)
-    }
-  })
+      throw error
+    },
+  )
   return dbPromise
 }
 
@@ -175,8 +212,8 @@ export function objectUrl(blob: Blob): string {
 
 // The journal's extra checks (other regions' words, one word for "I"), off by default: the review is a
 // spellchecker unless the learner turns them on in Settings. Shared by every page, in sync across tabs.
-const EXTRA_CHECKS_KEY = 'language-helper:journal-extra-checks'
-const EXTRA_CHECKS_EVENT = 'language-helper:journal-extra-checks-change'
+const EXTRA_CHECKS_KEY = 'mai-tutor:journal-extra-checks'
+const EXTRA_CHECKS_EVENT = 'mai-tutor:journal-extra-checks-change'
 // Used when localStorage is unavailable: the choice then lasts until the page reloads.
 let unsavedExtraChecks = false
 

@@ -78,7 +78,7 @@ function SiteHeader({ route }: { route: Route }) {
   return (
     <div className="site-header">
       <a className="brand" href={ROUTE_HREF.home}>
-        ✦ Language Helper ✦
+        ✦ Mai ✦
       </a>
       <div className="menu" ref={menuRef}>
         <button type="button" aria-expanded={open} aria-controls="site-menu" onClick={() => setOpen((o) => !o)}>
