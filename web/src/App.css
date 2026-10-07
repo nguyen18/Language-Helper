@@ -193,6 +193,29 @@ button.mic.listening {
   height: 96px;
 }
 
+/* Home: the "MAI / your language tutor" wordmark above the greeting (owner's request 2026-10-07) */
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 0 24px;
+  line-height: 1;
+}
+
+.wordmark-name {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.wordmark-tagline {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 /* Home: Mai's greeting in a speech bubble beside her picture */
 .mai-greeting {
   display: flex;
@@ -1988,13 +2011,12 @@ button.tip-trigger.word-mark.picked {
 
 /* =========================================================================================================
    Journal, zine style (owner's reference: Daplit, 2026-10-01): graph paper, thin ink lines and square
-   corners, Space Grotesk headings framed by slashes, tape on photos. Only the journal uses this look.
+   corners, Playpen Sans headings framed by slashes, tape on photos. Only the journal uses this look.
    ========================================================================================================= */
 .journal-page {
   --ink: var(--text);
   --grid: #e7e6f3;
   --cell: 22px;
-  --display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   min-height: 100dvh;
   background-color: var(--bg);
   background-image:
@@ -2222,7 +2244,6 @@ button.icon-button:active {
 }
 
 .journal-correction-count {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--muted);
@@ -2499,7 +2520,7 @@ button.make-sticker {
 .item-caption {
   width: max(100%, 96px);
   margin: 0;
-  font-family: var(--display, system-ui);
+  font-family: var(--display);
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.25;
@@ -2714,7 +2735,7 @@ ruby.fix {
 
 .fix-new {
   padding: 0 3px;
-  font-family: var(--display, system-ui);
+  font-family: var(--display);
   font-size: 0.68em;
   font-weight: 700;
   line-height: 1.2;
@@ -2937,7 +2958,6 @@ div.audio-bar {
 
 .audio-time {
   flex: none;
-  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -2997,7 +3017,7 @@ button.record-nudge {
   display: block;
   max-width: 220px;
   padding: 8px 12px;
-  font-family: var(--display, system-ui);
+  font-family: var(--display);
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.35;
