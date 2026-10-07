@@ -148,14 +148,11 @@ export function sentencePieces(s: ReviewSentence): Piece[] {
 /** A hint with its key (`${sentence}:${hint}`), for accepting it. */
 export type KeyedHint = ReviewHint & { key: string }
 
-/** Every change, hint and frame of the review, gathered across sentences. Frames are listed once each. */
+/** Every change and hint of the review, gathered across sentences. */
 export function reviewNotes(review: Review) {
-  const frames = new Map<string, ReviewFrame>()
-  for (const s of review.sentences) for (const f of s.frames) frames.set(f.id, f)
   return {
     changes: review.sentences.flatMap((s) => s.changes),
     hints: review.sentences.flatMap((s, si) => s.hints.map((h, hi): KeyedHint => ({ ...h, key: `${si}:${hi}` }))),
-    frames: [...frames.values()],
     unchecked: review.sentences.flatMap((s) => s.unchecked),
   }
 }
@@ -202,3 +199,87 @@ export function keepCapital(word: string, pick: string): string {
   const first = word.charAt(0)
   return first && first !== first.toLowerCase() ? pick.charAt(0).toUpperCase() + pick.slice(1) : pick
 }
+
+/** Mai's check of a sticker's or photo's caption: the corrected label and what changed. */
+export type CaptionCheck = { input: string; corrected: string; changes: ReviewChange[] }
+
+export async function checkCaption(target: TargetLanguage, input: string, extraChecks: boolean): Promise<CaptionCheck> {
+  const { review } = await checkSpelling(target, input, extraChecks)
+  return { input, corrected: review.corrected, changes: review.sentences.flatMap((s) => s.changes) }
+}
+
+/** A run of the learner's original sentence: as written, or a word or phrase a change replaces. */
+export type Segment = { text: string; start: number; change?: ReviewChange }
+
+// The first whole-word occurrence of `needle` in `text` at or after `from`; exact case first, then any case.
+function findWord(text: string, needle: string, from: number, taken: (start: number, end: number) => boolean): number {
+  for (const hay of [text, text.toLowerCase()]) {
+    const n = hay === text ? needle : needle.toLowerCase()
+    for (let i = hay.indexOf(n, from); i >= 0; i = hay.indexOf(n, i + 1)) {
+      const end = i + n.length
+      if (!isLetter(text[i - 1]) && !isLetter(text[end]) && !taken(i, end)) return i
+    }
+  }
+  return -1
+}
+
+/**
+ * The learner's original sentence in runs, each change on the words it replaces, so its correction can be
+ * written above them ("hom nay" with "hôm nay" over it; "grocery store" crossed out, "tạp hoá" over it).
+ * Changes are found in the order their corrections appear in the corrected sentence; words left out
+ * ("the") wherever they're found. A change that can't be found is skipped.
+ */
+export function alignSentence(sentence: ReviewSentence): Segment[] {
+  const text = sentence.original
+  const spans: { start: number; end: number; change: ReviewChange }[] = []
+  const taken = (start: number, end: number) => spans.some((s) => start < s.end && end > s.start)
+  let cursor = 0
+  // Corrections in the order they read in the corrected sentence, then the words left out.
+  const ordered = sentencePieces(sentence).flatMap((p) => (p.change ? [p.change] : []))
+  const leftOut = sentence.changes.filter((c) => !c.to)
+  for (const change of ordered) {
+    const at = findWord(text, change.from, cursor, taken)
+    if (at < 0) continue
+    spans.push({ start: at, end: at + change.from.length, change })
+    cursor = at + change.from.length
+  }
+  for (const change of leftOut) {
+    const at = findWord(text, change.from, 0, taken)
+    if (at >= 0) spans.push({ start: at, end: at + change.from.length, change })
+  }
+  spans.sort((a, b) => a.start - b.start)
+  const out: Segment[] = []
+  let at = 0
+  for (const s of spans) {
+    if (s.start > at) out.push({ text: text.slice(at, s.start), start: at })
+    out.push({ text: text.slice(s.start, s.end), start: s.start, change: s.change })
+    at = s.end
+  }
+  if (at < text.length) out.push({ text: text.slice(at), start: at })
+  return out
+}
+
+/**
+ * Where the sentence's words of several syllables ("hôm nay") are in `text` (a run of the original), as
+ * offsets, so they stay one hoverable word. Found by their spelling, since the original and corrected
+ * sentences don't line up offset for offset.
+ */
+export function joinedWordsIn(text: string, sentence: ReviewSentence): { start: number; end: number }[] {
+  const words = [...new Set((sentence.words ?? []).map((w) => sentence.corrected.slice(w.start, w.end)))]
+  const found: { start: number; end: number }[] = []
+  for (const w of words) {
+    let from = 0
+    for (let i = findWord(text, w, from, () => false); i >= 0; i = findWord(text, w, from, () => false)) {
+      found.push({ start: i, end: i + w.length })
+      from = i + w.length
+    }
+  }
+  return found.sort((a, b) => a.start - b.start)
+}
+
+// Letters without accents, lowercase ("Rất" → "rat", "đi" → "di").
+const bareLetters = (s: string) =>
+  s.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+
+/** Whether two words have the same letters, accents aside: "rat" and "rất". */
+export const sameLetters = (a: string, b: string) => bareLetters(a) === bareLetters(b)

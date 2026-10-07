@@ -1,15 +1,19 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { newId, nowLocal, objectUrl, useStickers, type JournalEntry, type SheetItem, type Sticker } from '../lib/journal'
 import { firstSlot, type Frame } from '../lib/frames'
 import { shrinkImage } from '../lib/images'
 import type { TargetLanguage } from '../lib/languages'
+import { entryDate } from '../lib/journalDates'
 import { AudioNoteRecorder } from './AudioNoteRecorder'
+import { EntryHead } from './EntryHead'
 import { FramesBrowser } from './FramesBrowser'
-import { JournalSheet } from './JournalSheet'
+import { JournalSheet, type SheetApi } from './JournalSheet'
 import { StickerMaker } from './StickerMaker'
 
-// Writing or editing a journal entry: when it happened, the entry sheet (text, photos and stickers placed
-// anywhere), and an optional audio note.
+// Writing or editing a journal entry, laid out like a zine page (owner's reference: Daplit): a top bar
+// (← cancel, title, Save), the dated page (date row and week, as on saved entries) with the text, photos
+// and stickers placed anywhere, and a toolbar (Photo, Stickers, Frames, Audio) whose tools open one at a
+// time in a panel above it. On a phone the editor covers the screen, the toolbar within thumb's reach.
 
 type Props = {
   target: TargetLanguage
@@ -19,6 +23,11 @@ type Props = {
   onCancel: () => void
 }
 
+type Panel = 'stickers' | 'frames' | 'audio'
+const PANEL_NAMES: Record<Panel, string> = { stickers: 'Stickers', frames: 'Sentence frames', audio: 'Audio note' }
+const PANEL_SHORT: Record<Panel, string> = { stickers: 'Stickers', frames: 'Frames', audio: 'Audio' }
+const PANEL_ICONS: Record<Panel, string> = { stickers: '✂️', frames: '💡', audio: '🎙' }
+
 // New photos and stickers go below the writing and everything already on the page, alternating left
 // and right, so they never cover anything; they can be dragged anywhere after. `textBottom` is where the
 // text ends, as a fraction of the sheet's width.
@@ -26,19 +35,6 @@ function placeNew(items: SheetItem[], w: number, textBottom: number): Pick<Sheet
   const right = items.length % 2 === 1
   const lowest = Math.max(textBottom, ...items.map((i) => i.y + i.w * i.aspect))
   return { x: right ? Math.max(0.04, 0.96 - w) : 0.04, y: lowest + 0.03, rotation: right ? 3 : -3 }
-}
-
-// How far down the sheet the text reaches (not counting the empty lines the box starts with).
-function textBottom(frame: HTMLElement | null): number {
-  const box = frame?.querySelector('textarea')
-  if (!frame || !box) return 0
-  const { height, minHeight } = box.style
-  box.style.minHeight = '0'
-  box.style.height = '0'
-  const bottom = box.scrollHeight
-  box.style.minHeight = minHeight
-  box.style.height = height
-  return bottom / frame.getBoundingClientRect().width
 }
 
 export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
@@ -51,38 +47,23 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
   const [error, setError] = useState<string | null>(null)
   const { stickers, add: addSticker, remove: removeSticker } = useStickers()
   const photoRef = useRef<HTMLInputElement>(null)
-  const sheetRef = useRef<HTMLDivElement>(null)
-  const [showFrames, setShowFrames] = useState(false)
-  // Where to put the cursor after a frame is inserted (its first slot, selected).
-  const pendingSelection = useRef<{ start: number; end: number } | null>(null)
+  const sheetApi = useRef<SheetApi | null>(null)
+  // The tool panel open above the toolbar: one at a time, so the page stays in view on a phone.
+  const [panel, setPanel] = useState<Panel | null>(null)
+  const toggle = (p: Panel) => setPanel((open) => (open === p ? null : p))
 
-  useLayoutEffect(() => {
-    const box = sheetRef.current?.querySelector('textarea')
-    const sel = pendingSelection.current
-    if (!box || !sel) return
-    pendingSelection.current = null
-    box.focus()
-    box.setSelectionRange(sel.start, sel.end)
-  }, [text])
-
-  // A frame's pattern goes in at the cursor (or the end), after a space when needed.
-  const insertFrame = (frame: Frame) => {
-    const box = sheetRef.current?.querySelector('textarea')
-    const start = box?.selectionStart ?? text.length
-    const end = box?.selectionEnd ?? text.length
-    const before = text.slice(0, start)
-    const gap = before && !/\s$/.test(before) ? ' ' : ''
-    const at = start + gap.length
-    const slot = firstSlot(frame.text)
-    pendingSelection.current = slot
-      ? { start: at + slot.start, end: at + slot.end }
-      : { start: at + frame.text.length, end: at + frame.text.length }
-    setText(before + gap + frame.text + text.slice(end))
-  }
+  // On a phone the editor covers the screen; the page behind it shouldn't scroll.
+  useEffect(() => {
+    document.body.classList.add('journal-editing')
+    return () => document.body.classList.remove('journal-editing')
+  }, [])
+  // A frame's pattern goes in at the cursor (or the end), its first slot ("{place}") selected so typing
+  // replaces it.
+  const insertFrame = (frame: Frame) => sheetApi.current?.insert(frame.text, firstSlot(frame.text) ?? undefined)
 
   const addItem = (kind: SheetItem['kind'], image: Blob, aspect: number) => {
     const w = kind === 'photo' ? 0.42 : 0.26
-    const below = textBottom(sheetRef.current)
+    const below = sheetApi.current?.textBottom() ?? 0
     setItems((list) => [...list, { id: newId(), kind, image, aspect, w, ...placeNew(list, w, below) }])
   }
 
@@ -140,102 +121,140 @@ export function JournalEditor({ target, entry, onSave, onCancel }: Props) {
         createdAt: entry?.createdAt ?? now,
         updatedAt: now,
       })
-    } catch {
-      setError("Couldn't save the entry. Try again.")
+    } catch (err) {
+      // The browser's reason, so a failure on one phone can be told apart from another.
+      const reason = err instanceof Error || err instanceof DOMException ? `${err.name}: ${err.message}` : String(err)
+      console.error('Saving the journal entry failed:', err)
+      setError(`Couldn't save the entry. Try again. (${reason})`)
       setSaving(false)
     }
   }
 
+  const title = entry ? 'Edit entry' : 'New entry'
+  const date = entryDate(when || nowLocal(), target.code)
+
   return (
-    <section className="card journal-editor" aria-label={entry ? 'Edit entry' : 'New entry'}>
-      <div className="card-head">
-        <h2>{entry ? 'Edit entry' : 'New entry'}</h2>
-        <span className="language-tag">{target.label}</span>
+    <section className="journal-editor" aria-label={title}>
+      <header className="editor-bar">
+        <button type="button" className="icon-button" aria-label="Cancel" title="Cancel" onClick={onCancel} disabled={saving}>
+          ←
+        </button>
+        <h2 className="slashed">{entry ? 'Edit' : 'New entry'}</h2>
+        <button type="button" className="primary" onClick={save} disabled={saving || empty}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </header>
+
+      <div className="editor-body">
+        <EntryHead when={when} date={date} lang={target.code}>
+          <span className="entry-date editor-date">
+            <input
+              id="journal-when"
+              className="journal-when"
+              type="datetime-local"
+              aria-label="Date and time"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+            />
+            <span className="muted" lang={target.code}>
+              {date.date}
+            </span>
+          </span>
+        </EntryHead>
+
+        <div className="editor-page">
+          <JournalSheet
+            apiRef={sheetApi}
+            text={text}
+            items={items}
+            onTextChange={setText}
+            onItemsChange={setItems}
+            lang={target.code}
+            label={`Your entry, in ${target.label}`}
+            placeholder={`Write your entry in ${target.label}. Stuck on a word? Write it in English…`}
+            captionPlaceholder={`Label it in ${target.label}…`}
+          />
+        </div>
+        {audio && panel !== 'audio' && (
+          <p className={spokenOnly ? 'journal-nudge' : 'muted editor-audio-note'}>
+            🎙 Audio note added.{spokenOnly && ' Type out what you said on the page, so Mai can check it.'}
+          </p>
+        )}
+        {error && <p className="error">{error}</p>}
       </div>
 
-      <label className="form-label" htmlFor="journal-when">
-        Date and time
-      </label>
-      <input
-        id="journal-when"
-        className="journal-when"
-        type="datetime-local"
-        value={when}
-        onChange={(e) => setWhen(e.target.value)}
-      />
-
-      <div ref={sheetRef}>
-        <JournalSheet
-          text={text}
-          items={items}
-          onTextChange={setText}
-          onItemsChange={setItems}
-          lang={target.code}
-          label={`Your entry, in ${target.label}`}
-          placeholder={`Write your entry in ${target.label}. Stuck on a word? Write it in English…`}
-        />
-      </div>
-
-      <div className="journal-tools">
-        <button type="button" onClick={() => photoRef.current?.click()}>
-          📷 Add a photo
-        </button>
-        <input
-          ref={photoRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => {
-            void addPhoto(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
-        <button type="button" onClick={() => setMakingSticker(true)}>
-          ✂️ Make a sticker
-        </button>
-        <button type="button" aria-expanded={showFrames} onClick={() => setShowFrames((v) => !v)}>
-          💡 Sentence frames
-        </button>
-      </div>
-
-      {showFrames && (
-        <section className="journal-frames-panel" aria-label="Sentence frames">
-          <p className="muted">Tap a frame to put it in your entry, then type over the part in {'{braces}'}.</p>
-          <FramesBrowser target={target} onPick={insertFrame} />
+      {panel && (
+        <section className="editor-panel" aria-label={PANEL_NAMES[panel]}>
+          <div className="editor-panel-head">
+            <h3 className="slashed">{PANEL_NAMES[panel]}</h3>
+            <button type="button" className="icon-button small" aria-label="Close" onClick={() => setPanel(null)}>
+              ✕
+            </button>
+          </div>
+          {panel === 'stickers' && (
+            <>
+              <button type="button" className="make-sticker" onClick={() => setMakingSticker(true)}>
+                ✂️ Make a sticker
+              </button>
+              <div className="sticker-tray" aria-label="Your stickers">
+                {stickers.length ? (
+                  stickers.map((s) => (
+                    <TraySticker key={s.id} sticker={s} onAdd={() => addItem('sticker', s.image, s.aspect)} onRemove={() => removeSticker(s.id)} />
+                  ))
+                ) : (
+                  <p className="muted">
+                    Your stickers show up here. Cut one out of a photo, or paste one (on an iPhone, touch and hold part
+                    of a photo, then Copy).
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+          {panel === 'frames' && (
+            <>
+              <p className="muted">Tap a frame to put it in your entry, then type over the part in {'{braces}'}.</p>
+              <FramesBrowser target={target} onPick={insertFrame} />
+            </>
+          )}
+          {panel === 'audio' && (
+            <>
+              <AudioNoteRecorder audio={audio} onChange={setAudio} />
+              <p className="muted">Spoke your entry? Type out what you said on the page too, so Mai can check it.</p>
+            </>
+          )}
         </section>
       )}
 
-      <div className="sticker-tray" aria-label="Your stickers">
-        {stickers.length ? (
-          stickers.map((s) => (
-            <TraySticker key={s.id} sticker={s} onAdd={() => addItem('sticker', s.image, s.aspect)} onRemove={() => removeSticker(s.id)} />
-          ))
-        ) : (
-          <p className="muted">
-            Your stickers show up here. Cut one out of a photo, or paste one (on an iPhone, touch and hold
-            part of a photo, then Copy).
-          </p>
+      <div className="editor-toolbar-area">
+        {/* A nudge to read the entry aloud: once there's writing and no recording yet. */}
+        {text.trim() && !audio && panel !== 'audio' && (
+          <button type="button" className="record-nudge" onClick={() => setPanel('audio')}>
+            Now read it out loud! Tap to record yourself 🎙
+          </button>
         )}
-      </div>
-
-      <div className="journal-audio">
-        <p className="form-label">Audio note (optional)</p>
-        <AudioNoteRecorder audio={audio} onChange={setAudio} />
-        {audio && (
-          <p className={spokenOnly ? 'journal-nudge' : 'muted'}>
-            Spoke your entry? Type out what you said on the page above, so Mai can check it.
-          </p>
-        )}
-      </div>
-
-      {error && <p className="error">{error}</p>}
-      <div className="modal-actions">
-        <button type="button" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-        <button type="button" className="primary" onClick={save} disabled={saving || empty}>
-          {saving ? 'Saving…' : text.trim() ? 'Save and check' : 'Save'}
-        </button>
+        <nav className="editor-toolbar" aria-label="Add to your entry">
+          <button type="button" onClick={() => photoRef.current?.click()}>
+            <span aria-hidden="true">📷</span>
+            Photo
+          </button>
+          <input
+            ref={photoRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              void addPhoto(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+          {(['stickers', 'frames', 'audio'] as const).map((p) => (
+            <button key={p} type="button" aria-pressed={panel === p} onClick={() => toggle(p)}>
+              <span aria-hidden="true">{PANEL_ICONS[p]}</span>
+              {PANEL_SHORT[p]}
+              {p === 'audio' && audio && <span className="toolbar-dot" aria-label="(added)" />}
+            </button>
+          ))}
+        </nav>
       </div>
 
       {makingSticker && <StickerMaker onDone={keepSticker} onCancel={() => setMakingSticker(false)} />}

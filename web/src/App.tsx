@@ -32,7 +32,7 @@ function App() {
   return (
     <>
       {/* Keyed by route so the menu starts closed on every page, including after Back. */}
-      <SiteHeader key={route} route={route} />
+      <SiteMenu key={route} route={route} />
       {route === 'discover' ? (
         <Discoverer />
       ) : route === 'cheatsheet' ? (
@@ -56,7 +56,11 @@ function App() {
   )
 }
 
-function SiteHeader({ route }: { route: Route }) {
+// The site's menu: a button floating in the bottom-left corner, fixed while the page scrolls, whose
+// options open to its right (owner's request 2026-10-01; it replaced the header with the "✦ Language
+// Helper ✦" wordmark and a ☰ Menu button). On the chat page it sits above the reply box; it hides while
+// the journal editor covers a phone's screen.
+function SiteMenu({ route }: { route: Route }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -76,35 +80,37 @@ function SiteHeader({ route }: { route: Route }) {
   }, [open])
 
   return (
-    <div className="site-header">
-      <a className="brand" href={ROUTE_HREF.home}>
-        ✦ Mai ✦
-      </a>
-      <div className="menu" ref={menuRef}>
-        <button type="button" aria-expanded={open} aria-controls="site-menu" onClick={() => setOpen((o) => !o)}>
-          {open ? '✕ Close' : '☰ Menu'}
-        </button>
-        {open && (
-          <nav id="site-menu" className="menu-panel">
-            {MENU_ITEMS.map((item) => (
-              <a
-                key={item.route}
-                href={ROUTE_HREF[item.route]}
-                aria-current={item.route === route ? 'page' : undefined}
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </a>
-            ))}
-            <p className="menu-heading">Coming soon</p>
-            {COMING_SOON.map((label) => (
-              <span key={label} className="menu-soon">
-                {label}
-              </span>
-            ))}
-          </nav>
-        )}
-      </div>
+    <div className={route === 'discover' ? 'site-menu raised' : 'site-menu'} ref={menuRef}>
+      <button
+        type="button"
+        className="menu-fab"
+        aria-expanded={open}
+        aria-controls="site-menu"
+        aria-label={open ? 'Close menu' : 'Menu'}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {open ? '✕' : '☰'}
+      </button>
+      {open && (
+        <nav id="site-menu" className="menu-panel">
+          {MENU_ITEMS.map((item) => (
+            <a
+              key={item.route}
+              href={ROUTE_HREF[item.route]}
+              aria-current={item.route === route ? 'page' : undefined}
+              onClick={() => setOpen(false)}
+            >
+              {item.label}
+            </a>
+          ))}
+          <p className="menu-heading">Coming soon</p>
+          {COMING_SOON.map((label) => (
+            <span key={label} className="menu-soon">
+              {label}
+            </span>
+          ))}
+        </nav>
+      )}
     </div>
   )
 }

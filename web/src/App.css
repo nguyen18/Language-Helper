@@ -274,48 +274,59 @@ button.link {
 
 /* Site header and menu */
 
-.site-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 20px 16px 0;
+/* The site menu: a square button floating in the bottom-left corner (fixed while scrolling), its options
+   opening to its right, from the bottom up. */
+.site-menu {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 25;
 }
 
-.brand {
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 0.9rem;
-  color: var(--accent);
-  text-decoration: none;
+/* On the chat page, above the sticky reply box. */
+.site-menu.raised {
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 150px);
 }
 
-.menu {
-  position: relative;
+button.menu-fab {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--text);
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--text);
+}
+
+button.menu-fab[aria-expanded='true'] {
+  background: var(--accent-soft);
 }
 
 .menu-panel {
   position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
+  left: calc(100% + 10px);
+  bottom: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  min-width: 240px;
-  max-width: calc(100vw - 32px);
+  min-width: 200px;
+  max-width: calc(100vw - 100px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
   padding: 8px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgb(35 37 110 / 0.12);
+  border: 1.5px solid var(--text);
+  box-shadow: 3px 3px 0 var(--text);
 }
 
 .menu-panel a {
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 0;
   color: var(--text);
   text-decoration: none;
 }
@@ -1668,26 +1679,6 @@ button.chip.danger {
   cursor: crosshair;
 }
 
-/* Sentence frames the entry follows, for reusing the patterns. */
-.journal-frames {
-  margin-top: 10px;
-  font-size: 0.85rem;
-}
-
-.journal-frames summary {
-  cursor: pointer;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.journal-frames ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
-}
-
-.journal-frames li span:first-child {
-  font-weight: 600;
-}
 
 /* Settings: on/off options with a title and an explanation */
 .setting-toggle {
@@ -1939,6 +1930,12 @@ button.frame-option {
   overflow-y: auto;
 }
 
+/* These meanings have no star, so the word type takes the first column instead of
+   overflowing the star's narrow one onto the definition. */
+.other-meanings button.tip-option {
+  grid-template-columns: auto 1fr;
+}
+
 /* A suggested word's meanings, one per line, under the word */
 .option-meaning {
   display: block;
@@ -1987,4 +1984,1054 @@ button.tip-trigger.word-mark.picked {
 
 .tip-box > .word-options-label:first-child {
   margin-top: 0;
+}
+
+/* =========================================================================================================
+   Journal, zine style (owner's reference: Daplit, 2026-10-01): graph paper, thin ink lines and square
+   corners, Space Grotesk headings framed by slashes, tape on photos. Only the journal uses this look.
+   ========================================================================================================= */
+.journal-page {
+  --ink: var(--text);
+  --grid: #e7e6f3;
+  --cell: 22px;
+  --display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: var(--cell) var(--cell);
+}
+
+.journal-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 16px 96px;
+}
+
+.journal-page h1,
+.journal-page h2,
+.journal-page h3,
+.journal-page .entry-date-row,
+.journal-page .entry-week {
+  font-family: var(--display);
+}
+
+/* "/ Journal /" */
+.slashed::before {
+  content: '/ ';
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.slashed::after {
+  content: ' /';
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.journal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journal-title-row h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Square outline buttons (＋, ←), like a zine's toolbar */
+button.icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+}
+
+button.icon-button:active {
+  background: var(--accent-soft);
+}
+
+.journal-intro {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.journal-empty {
+  margin-top: 20px;
+  color: var(--muted);
+}
+
+.journal-page .journal-new {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.journal-page button.primary,
+.journal-page button.chip,
+.journal-page .journal-sheet {
+  border-radius: 0;
+}
+
+.journal-page button.chip {
+  border-color: var(--ink);
+}
+
+/* An entry: a bordered page with a "Date" row and the week on top */
+.journal-entry {
+  margin-top: 20px;
+  padding-bottom: 14px;
+  list-style: none;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+}
+
+.journal-entry > :not(.entry-head) {
+  margin-left: 14px;
+  margin-right: 14px;
+}
+
+.entry-head {
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.entry-date-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  border-bottom: 1px solid var(--ink);
+}
+
+.entry-date-label {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-right: 1px solid var(--ink);
+}
+
+.entry-date {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.entry-date-row .language-tag {
+  margin-right: 10px;
+  border-radius: 0;
+}
+
+.entry-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 0;
+  padding: 6px 4px;
+  list-style: none;
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.entry-week li {
+  justify-self: center;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+/* The entry's own day, circled */
+.entry-week li.today {
+  color: var(--ink);
+  font-weight: 700;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+}
+
+/* The page itself: graph paper whose rows are the text's lines */
+.journal-page .journal-sheet-frame {
+  margin-top: 14px;
+}
+
+.journal-page .journal-sheet {
+  border: none;
+  background-color: transparent;
+  background-image:
+    linear-gradient(to bottom, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px)),
+    linear-gradient(90deg, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px));
+  background-size: var(--line) var(--line);
+  background-position: 0 14px;
+}
+
+.journal-page .journal-sheet.editing {
+  outline: 1px dashed var(--border);
+}
+
+.journal-page .journal-sheet.editing:focus-within {
+  outline-color: var(--accent);
+}
+
+/* Photos are taped on: a strip of blush tape across the top */
+.sheet-item.photo::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  z-index: 1;
+  width: 40%;
+  height: 18px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: color-mix(in srgb, var(--blush) 80%, transparent);
+  box-shadow: 0 1px 2px rgb(35 37 110 / 0.12);
+}
+
+.journal-page .sheet-item.photo img {
+  border-radius: 0;
+}
+
+/* "/ Mai's notes /" */
+.journal-page .journal-correction {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--ink);
+}
+
+.journal-page h3.journal-correction-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--translation);
+}
+
+.journal-correction-count {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* The "/ Mai's notes /" title's slashes come after the label text in the flex row. */
+.journal-page h3.journal-correction-label::after {
+  order: 0;
+}
+
+.journal-page .journal-correction-count {
+  order: 1;
+}
+
+.journal-page .change-legend li {
+  border-radius: 0;
+}
+
+.journal-page .journal-entry-actions {
+  justify-content: flex-end;
+}
+
+/* The editor: a top bar (← title Save), the dated page, a tool panel, and a toolbar. Inline as a bordered
+   page on wider screens; on a phone it covers the screen (below). */
+.journal-editor {
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+}
+
+.editor-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1.5px solid var(--ink);
+  background: var(--surface);
+}
+
+.editor-bar h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.editor-bar button.primary {
+  padding: 8px 18px;
+}
+
+.editor-body {
+  padding-bottom: 12px;
+}
+
+.editor-body > :not(.entry-head) {
+  margin-left: 14px;
+  margin-right: 14px;
+}
+
+.editor-date {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px;
+}
+
+.editor-date .journal-when {
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  font-family: var(--display);
+  font-weight: 500;
+}
+
+.editor-date .muted {
+  font-size: 0.75rem;
+}
+
+/* iOS Safari draws date inputs as centered buttons; keep the date on the left, like the saved page's. */
+.editor-date .journal-when {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 1.6em;
+  text-align: left;
+}
+
+.editor-date .journal-when::-webkit-date-and-time-value {
+  margin: 0;
+  text-align: left;
+}
+
+.editor-audio-note {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+/* One tool at a time, above the toolbar */
+.editor-panel {
+  padding: 10px 14px 14px;
+  border-top: 1.5px solid var(--ink);
+  background: var(--surface);
+}
+
+.editor-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.editor-panel-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+button.icon-button.small {
+  width: 30px;
+  height: 30px;
+  font-size: 0.85rem;
+}
+
+.editor-panel .sticker-tray {
+  border-radius: 0;
+}
+
+button.make-sticker {
+  border-radius: 0;
+  border-color: var(--ink);
+}
+
+.editor-panel .journal-frames-panel,
+.editor-panel .frames-list button.frame-option {
+  border-radius: 0;
+}
+
+.editor-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1.5px solid var(--ink);
+  background: var(--surface);
+}
+
+.editor-toolbar button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  font-family: var(--display);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+/* :not(:first-of-type), not "+": the hidden photo input sits between the first two buttons. */
+.editor-toolbar button:not(:first-of-type) {
+  border-left: 1px solid var(--ink);
+}
+
+.editor-toolbar button span[aria-hidden] {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.editor-toolbar button[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+
+.toolbar-dot {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 18px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--translation);
+}
+
+@media (max-width: 600px) {
+  /* The editor covers the screen: bar on top, page in between, panel and toolbar at the bottom. */
+  .journal-editor {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border: none;
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: var(--cell) var(--cell);
+  }
+
+  .editor-bar {
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+
+  .editor-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--surface);
+  }
+
+  .editor-body > :not(.entry-head) {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .editor-panel {
+    max-height: 45dvh;
+    overflow-y: auto;
+  }
+
+  .editor-toolbar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  body.journal-editing {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 600px) {
+  .journal-inner {
+    padding: 14px 12px 96px;
+  }
+
+  .journal-entry > :not(.entry-head) {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .entry-date-row {
+    grid-template-columns: auto 1fr;
+  }
+
+  /* On a phone the language tag moves under the date, so the date has the row. */
+  .entry-date-row .language-tag {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0 0 6px 12px;
+  }
+
+  .entry-week {
+    font-size: 0.7rem;
+  }
+
+  .entry-week li {
+    padding: 2px 4px;
+  }
+}
+
+/* Captions: a label hanging under a sticker or photo, with an arrow, like a zine's. The learner's words
+   in blue; Mai's fix in red. */
+.item-caption,
+.item-caption-input {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* About as wide as its picture (at least 96px), wrapping rather than running off the page's edge. */
+.item-caption {
+  width: max(100%, 96px);
+  margin: 0;
+  font-family: var(--display, system-ui);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.caption-arrow {
+  margin-right: 3px;
+  opacity: 0.7;
+}
+
+.item-caption s {
+  opacity: 0.6;
+}
+
+/* Mai's version on its own line, under the learner's struck-out one. */
+.caption-fix {
+  display: block;
+  color: var(--translation);
+}
+
+/* At least 16px, so iPhones don't zoom in when it's focused. */
+.item-caption-input {
+  width: max(130%, 140px);
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  border-radius: 0;
+}
+
+/* Text wrapping around the pictures (lib/textWrap.ts): each picture has an invisible float in the text's
+   flow, on the side it sits on, stacked down the page in order. */
+.journal-flow {
+  display: flow-root;
+}
+
+.wrap-float {
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wrap-float.left {
+  float: left;
+  clear: left;
+}
+
+.wrap-float.right {
+  float: right;
+  clear: right;
+}
+
+/* The editable page text (an editable div, so it can wrap like the saved page) */
+.journal-sheet.editing .journal-text {
+  min-height: calc(var(--line) * 8 + 38px);
+  outline: none;
+  cursor: text;
+}
+
+.journal-text.empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* The sticker maker's three ways in */
+.sticker-ways {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+button.sticker-way {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px;
+  text-align: left;
+  border: 1.5px solid var(--text);
+  border-radius: 0;
+}
+
+.sticker-way-icon {
+  grid-row: 1 / 3;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.sticker-way .muted {
+  font-size: 0.85rem;
+}
+
+/* Weekday names: short on a phone ("CN"), full on wider screens ("Chủ Nhật"). Full names can be long in
+   some languages, so they wrap within their column. */
+.weekday-long {
+  display: none;
+}
+
+@media (min-width: 601px) {
+  .weekday-short {
+    display: none;
+  }
+
+  .weekday-long {
+    display: inline;
+  }
+
+  .entry-week li {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+}
+
+/* One sheet of paper per entry: the learner's page, then Mai's notes written at the bottom of it, on the
+   same continuous grid (the sheet itself is transparent here). Mai's lines sit on the grid's rows. */
+.journal-page {
+  --line: 1.9rem;
+  --kind-spelling: #fde3cf;
+  --kind-foreign: #fff0a6;
+  --kind-frame: #d9f2df;
+  --kind-dialect: #dbe8ff;
+  --kind-pronoun: #ece0f8;
+}
+
+.entry-paper {
+  margin-top: 14px;
+  background-image:
+    linear-gradient(to bottom, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px)),
+    linear-gradient(90deg, transparent calc(var(--line) - 1px), var(--grid) calc(var(--line) - 1px));
+  background-size: var(--line) var(--line);
+  background-position: 0 14px;
+}
+
+.journal-page .entry-paper .journal-sheet-frame {
+  margin-top: 0;
+}
+
+.journal-page .entry-paper .journal-sheet {
+  background: none;
+}
+
+.journal-page .entry-paper .journal-correction {
+  margin: 0;
+  padding: 0 18px 12px;
+  border-top: none;
+}
+
+.journal-page .entry-paper h3.journal-correction-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: var(--line);
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: var(--line);
+}
+
+.entry-paper .journal-sentence {
+  padding: 0;
+}
+
+.entry-paper .journal-sentence + .journal-sentence {
+  border-top: none;
+}
+
+.entry-paper .journal-corrected {
+  font-size: 1.05rem;
+  line-height: var(--line);
+}
+
+.entry-paper .audio-note,
+.entry-paper .journal-nudge,
+.entry-paper .journal-check-status {
+  margin-left: 18px;
+  margin-right: 18px;
+}
+
+.entry-paper > .journal-nudge {
+  margin-bottom: 12px;
+}
+
+.page-legend {
+  margin-top: 10px;
+}
+
+/* Mai's corrections written over the learner's own words, like a teacher's red pen (<ruby>): her word small
+   and red above, tinted by kind; English crossed out in red; other fixes underlined. Pages with corrections
+   get taller grid rows, so there's room above each line. */
+.entry-paper.annotated,
+.entry-paper.annotated .journal-sheet {
+  --line: 2.6rem;
+}
+
+.journal-text.annotated {
+  padding-top: 20px;
+}
+
+ruby.fix {
+  ruby-position: over;
+  ruby-align: center;
+}
+
+.fix-new {
+  padding: 0 3px;
+  font-family: var(--display, system-ui);
+  font-size: 0.68em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--translation);
+  border-radius: 3px;
+}
+
+.fix-new[data-kind='spelling'] {
+  background: var(--kind-spelling);
+}
+
+.fix-new[data-kind='foreign'] {
+  background: var(--kind-foreign);
+}
+
+.fix-new[data-kind='frame'] {
+  background: var(--kind-frame);
+}
+
+.fix-new[data-kind='dialect'] {
+  background: var(--kind-dialect);
+}
+
+.fix-new[data-kind='pronoun'] {
+  background: var(--kind-pronoun);
+}
+
+.fix-new.picked {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The learner's words keep their blue; English is crossed out, other fixes underlined, in red. */
+.fix .fix-original {
+  color: var(--accent);
+  text-decoration: underline dotted var(--translation);
+  text-underline-offset: 4px;
+}
+
+.fix.crossed .fix-original {
+  text-decoration: line-through var(--translation) 2px;
+}
+
+/* Words on the page are buttons only to open their box: they look like the text around them. */
+.journal-text.annotated button.tip-trigger.change-mark,
+.journal-text.annotated button.tip-trigger.word-mark {
+  padding: 0;
+  font-weight: inherit;
+  color: inherit;
+  background: none;
+  line-height: inherit;
+}
+
+.journal-text.annotated button.tip-trigger.word-mark:hover,
+.journal-text.annotated button.tip-trigger.word-mark[aria-expanded='true'] {
+  background: var(--accent-soft);
+}
+
+/* The box opens under the word that was tapped. */
+.journal-text.annotated .change-wrap,
+.journal-text.annotated .word-wrap {
+  position: relative;
+}
+
+.journal-text.annotated .tip-box {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+/* Read-only pages let a word's box reach past the page's edge (pictures there are clamped anyway). */
+.journal-sheet:not(.editing) {
+  overflow: visible;
+}
+
+.journal-tap-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* An entry's ✎ and 🗑, laid over the bottom-right corner of its page; the page keeps a strip of blank
+   paper at the bottom for them, so they never sit on the writing. */
+.entry-paper {
+  position: relative;
+  padding-bottom: 36px;
+}
+
+.entry-tools {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.entry-tools .journal-confirm {
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+}
+
+.entry-tools .icon-button.small {
+  font-size: 0.95rem;
+}
+
+/* The floating menu needs room under each page's last line. */
+.app {
+  padding-bottom: 96px;
+}
+
+@media (max-width: 600px) {
+  /* The journal editor covers the screen with its own toolbar there. */
+  body.journal-editing .site-menu {
+    display: none;
+  }
+}
+
+/* The learner's words a little smaller, Mai's corrections a little bigger (owner's feedback); the grid rows
+   grow to keep room above each line. */
+.entry-paper.annotated,
+.entry-paper.annotated .journal-sheet {
+  --line: 2.75rem;
+}
+
+.entry-paper .journal-text.annotated {
+  font-size: 0.98rem;
+}
+
+.journal-text.annotated .fix-new {
+  font-size: 0.8em;
+}
+
+/* An entry's audio note: just the player bar, in the bottom row beside ✎ and 🗑. */
+.entry-tools.with-audio {
+  left: 8px;
+}
+
+.entry-tools .audio-bar {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+}
+
+.entry-paper:has(.entry-tools.with-audio) {
+  padding-bottom: 44px;
+}
+
+/* The audio note's player, in the journal's style: a square play button, a thin ink line with a square
+   handle (filled in blush as it plays), and the time. */
+div.audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.entry-tools div.audio-bar {
+  flex: 1;
+  height: auto;
+  /* A little room before ✎, so the bar's end doesn't crowd the buttons. */
+  margin-right: 10px;
+}
+
+.audio-play {
+  flex: none;
+  font-size: 0.75rem;
+}
+
+.audio-seek {
+  flex: 1;
+  min-width: 40px;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.audio-seek::-webkit-slider-runnable-track {
+  height: 6px;
+  background: linear-gradient(to right, var(--blush) var(--progress, 0%), var(--surface) var(--progress, 0%));
+  border: 1.5px solid var(--text);
+}
+
+.audio-seek::-moz-range-track {
+  height: 6px;
+  background: linear-gradient(to right, var(--blush) var(--progress, 0%), var(--surface) var(--progress, 0%));
+  border: 1.5px solid var(--text);
+}
+
+.audio-seek::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5.5px;
+  background: var(--text);
+  border: none;
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.audio-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--text);
+  border: none;
+  border-radius: 0;
+}
+
+.audio-time {
+  flex: none;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* Photos sit plain on the page: no white border or shadow (owner's feedback 2026-10-01); the tape stays. */
+.sheet-item.photo img,
+.journal-page .sheet-item.photo img {
+  border: none;
+  box-shadow: none;
+}
+
+/* Stickers sit plain on the page: no shadow or outline (owner's feedback 2026-10-01; a blue outline was
+   tried and removed). */
+.sheet-item.sticker img {
+  filter: none;
+}
+
+@media (max-width: 600px) {
+  /* The writing area reaches the bottom of the full-screen editor (owner's feedback), so the whole page
+     below the text is part of it: each box down the chain fills the space left. The text box itself stays
+     a plain block, so it still wraps around the pictures' floats. */
+  .editor-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-page,
+  .editor-page .journal-sheet-frame,
+  .editor-page .journal-sheet {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-page .journal-flow {
+    flex: 1;
+  }
+
+  .editor-page .journal-sheet.editing .journal-text {
+    min-height: 100%;
+  }
+}
+
+/* A speech bubble over the toolbar's Audio button, reminding the learner to record themselves reading the
+   entry (owner's request); its tail points down at the button (the last of four). */
+.editor-toolbar-area {
+  position: relative;
+}
+
+button.record-nudge {
+  position: absolute;
+  right: 6px;
+  bottom: calc(100% + 10px);
+  z-index: 2;
+  display: block;
+  max-width: 220px;
+  padding: 8px 12px;
+  font-family: var(--display, system-ui);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--text);
+  background: var(--blush);
+  border: 1.5px solid var(--text);
+  border-radius: 12px;
+  box-shadow: 2px 2px 0 var(--text);
+}
+
+/* The tail: a small diamond's lower half, over the Audio button's middle (an eighth of the bar from the right). */
+button.record-nudge::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  right: calc(12.5vw - 6px - 6px);
+  width: 12px;
+  height: 12px;
+  background: var(--blush);
+  border-right: 1.5px solid var(--text);
+  border-bottom: 1.5px solid var(--text);
+  transform: rotate(45deg);
+}
+
+@media (min-width: 601px) {
+  /* On wider screens the toolbar is the editor's width (at most 680px), not the screen's. */
+  button.record-nudge::after {
+    right: calc(min(680px, 100vw - 32px) / 8 - 12px);
+  }
+}
+
+/* Tap-to-lift: the photo can't be tapped while the tool loads or is lifting. */
+.sticker-canvas.busy {
+  opacity: 0.8;
+  pointer-events: none;
 }

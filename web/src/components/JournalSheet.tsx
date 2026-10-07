@@ -1,9 +1,20 @@
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { objectUrl, type SheetItem } from '../lib/journal'
+import { useOutlines, useWidth, wrapFloats } from '../lib/textWrap'
 
-// The entry sheet: the journal text on lined paper, with photos and stickers placed anywhere on it.
-// Positions and sizes are fractions of the sheet's width (see SheetItem), so the page looks the same
-// on a phone and a laptop; CSS turns them into lengths with container query units (cqw).
+// The entry sheet: the journal text on graph paper, with photos and stickers placed anywhere on it, and
+// the text flowing around them (lib/textWrap.ts). Positions and sizes are fractions of the sheet's width
+// (see SheetItem), so the page looks the same on a phone and a laptop; CSS turns them into lengths with
+// container query units (cqw). Editing, the text is a plain-text editable area (a textarea can't wrap
+// around anything); the editor reaches it through `apiRef`.
+
+/** What the editor can do with the page's text. */
+export type SheetApi = {
+  /** Puts `text` at the cursor (or the end), after a space when needed, and selects `select` within it. */
+  insert: (text: string, select?: { start: number; end: number }) => void
+  /** Where the text ends, as a fraction of the page's width from its top. */
+  textBottom: () => number
+}
 
 const MIN_W = 0.08
 const MAX_W = 1
@@ -17,31 +28,44 @@ type Props = {
   onTextChange?: (text: string) => void
   onItemsChange?: (items: SheetItem[]) => void
   placeholder?: string
+  /** Shown in an empty caption box under a selected picture: "Label it in Southern Vietnamese…". */
+  captionPlaceholder?: string
   lang?: string
   label?: string
+  apiRef?: RefObject<SheetApi | null>
+  /** Read-only: the text as rendered with Mai's corrections written over it, in place of plain `text`. */
+  richText?: ReactNode
+  /** Space the text keeps clear in the top-right corner, for buttons laid over the page. */
+  corner?: { width: number; height: number }
 }
 
-export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, lang, label }: Props) {
+export function JournalSheet({ text, items, onTextChange, onItemsChange, placeholder, captionPlaceholder, lang, label, apiRef, richText, corner }: Props) {
   const editable = Boolean(onTextChange && onItemsChange)
   const sheetRef = useRef<HTMLDivElement>(null)
-  const textRef = useRef<HTMLTextAreaElement>(null)
+  const [sheet, setSheet] = useState<HTMLDivElement | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  const width = useWidth(sheet)
+  const outlineOf = useOutlines(items)
+  const floats = wrapFloats(items, width, outlineOf, (i) => Boolean(i.caption) || (editable && i.id === selected), corner)
   // The latest items, for drags: a drag's pointer handlers outlive the render that started it.
   const itemsRef = useRef(items)
   useLayoutEffect(() => {
     itemsRef.current = items
   })
 
-  // The textarea grows with its text, so the sheet reads like a page rather than a scrolling box.
-  useLayoutEffect(() => {
-    const el = textRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [text])
-
   // The page is at least as tall as its lowest photo or sticker.
   const bottom = Math.max(0, ...items.map((i) => i.y + i.w * i.aspect))
+
+  // A tap anywhere outside the selected picture (the text, the toolbar, the page around it) puts its edit
+  // handles away; tapping a picture selects it again. Its caption box is inside it, so typing there keeps it.
+  useEffect(() => {
+    if (!selected) return
+    const onDown = (e: globalThis.PointerEvent) => {
+      if (!(e.target as Element | null)?.closest?.('.sheet-item.selected')) setSelected(null)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [selected])
 
   const setItems = (next: SheetItem[]) => {
     itemsRef.current = next
@@ -136,28 +160,42 @@ export function JournalSheet({ text, items, onTextChange, onItemsChange, placeho
   return (
     <div className="journal-sheet-frame">
       <div
-        ref={sheetRef}
+        ref={(el) => {
+          sheetRef.current = el
+          setSheet(el)
+        }}
         className={`journal-sheet${editable ? ' editing' : ''}`}
-        style={{ minHeight: `calc(${bottom * 100}cqw + 24px)` }}
+        // Captions hang below their pictures: leave room for one.
+        style={{ minHeight: `calc(${bottom * 100}cqw + ${items.some((i) => i.caption || i.id === selected) ? 56 : 24}px)` }}
         onPointerDown={() => setSelected(null)}
       >
-        {editable ? (
-          <textarea
-            ref={textRef}
-            className="journal-text"
-            value={text}
-            lang={lang}
-            aria-label={label}
-            placeholder={placeholder}
-            onChange={(e) => onTextChange!(e.target.value)}
-            onPointerDown={(e) => e.stopPropagation()}
-            rows={8}
-          />
-        ) : (
-          <p className="journal-text" lang={lang}>
-            {text}
-          </p>
-        )}
+        {/* The pictures' stand-ins, then the text, which wraps around them. */}
+        <div className="journal-flow">
+          {floats.map((f) => (
+            <span
+              key={f.key}
+              className={`wrap-float ${f.side}`}
+              aria-hidden="true"
+              contentEditable={false}
+              style={{ width: f.width, height: f.height, shapeOutside: f.shape }}
+            />
+          ))}
+          {editable ? (
+            <EditableText
+              text={text}
+              onChange={onTextChange!}
+              lang={lang}
+              label={label}
+              placeholder={placeholder}
+              sheetRef={sheetRef}
+              apiRef={apiRef}
+            />
+          ) : (
+            <div className={richText ? 'journal-text annotated' : 'journal-text'} lang={lang}>
+              {richText ?? text}
+            </div>
+          )}
+        </div>
         {items.map((item) => (
           <ItemView
             key={item.id}
@@ -166,6 +204,9 @@ export function JournalSheet({ text, items, onTextChange, onItemsChange, placeho
             selected={selected === item.id}
             onStart={(e, mode) => startDrag(e, item, mode)}
             onKey={(e) => onItemKey(e, item)}
+            onCaption={(caption) => update(item.id, { caption })}
+            captionPlaceholder={captionPlaceholder}
+            lang={lang}
             onFocus={() => setSelected(item.id)}
             onRemove={() => remove(item.id)}
           />
@@ -183,9 +224,12 @@ type ItemProps = {
   onKey: (e: KeyboardEvent) => void
   onFocus: () => void
   onRemove: () => void
+  onCaption: (caption: string) => void
+  captionPlaceholder?: string
+  lang?: string
 }
 
-function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove }: ItemProps) {
+function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove, onCaption, captionPlaceholder, lang }: ItemProps) {
   const url = objectUrl(item.image)
   const name = item.kind === 'photo' ? 'Photo' : 'Sticker'
   return (
@@ -206,7 +250,26 @@ function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove 
         onFocus,
       })}
     >
-      <img src={url} alt={editable ? '' : name} draggable={false} />
+      <img src={url} alt={editable ? '' : item.caption || name} draggable={false} />
+      {editable && selected ? (
+        // Typing here mustn't drag the picture or reach its keyboard shortcuts (Backspace removes it).
+        <input
+          className="item-caption-input"
+          value={item.caption ?? ''}
+          placeholder={captionPlaceholder}
+          lang={lang}
+          aria-label={`${name} caption`}
+          enterKeyHint="done"
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+          onChange={(e) => onCaption(e.target.value)}
+        />
+      ) : (
+        item.caption && <Caption item={item} lang={lang} />
+      )}
       {editable && selected && (
         <>
           <button
@@ -225,5 +288,149 @@ function ItemView({ item, editable, selected, onStart, onKey, onFocus, onRemove 
         </>
       )}
     </div>
+  )
+}
+
+// A picture's caption, hanging below it with a small arrow, like a zine sticker's label. The learner's words
+// are blue; when Mai changed them, they're struck out and her version follows in red.
+function Caption({ item, lang }: { item: SheetItem; lang?: string }) {
+  const caption = item.caption ?? ''
+  const check = item.captionCheck?.input === caption ? item.captionCheck : undefined
+  const fixed = check && check.corrected.trim() !== caption.trim() ? check : undefined
+  return (
+    <p className="item-caption" lang={lang} title={fixed?.changes.map((c) => c.why).join(' ')}>
+      <span className="caption-arrow" aria-hidden="true">
+        ↳
+      </span>
+      {fixed ? (
+        <>
+          <s>{caption}</s> <strong className="caption-fix">{fixed.corrected}</strong>
+        </>
+      ) : (
+        <span>{caption}</span>
+      )}
+    </p>
+  )
+}
+
+// Browsers that can't edit plain text only (`plaintext-only`) get a rich editable area whose pastes are
+// turned into plain text.
+const PLAIN_ONLY = (() => {
+  if (typeof document === 'undefined') return false
+  const probe = document.createElement('div')
+  probe.contentEditable = 'plaintext-only'
+  return probe.contentEditable === 'plaintext-only'
+})()
+
+// The text as the learner sees it, with line breaks however the browser made them (newlines or <br>s).
+const readText = (el: HTMLElement) => el.innerText.replace(/\u00a0/g, ' ').replace(/\n$/, '')
+
+type EditableTextProps = {
+  text: string
+  onChange: (text: string) => void
+  lang?: string
+  label?: string
+  placeholder?: string
+  sheetRef: RefObject<HTMLDivElement | null>
+  apiRef?: RefObject<SheetApi | null>
+}
+
+// The page's text while editing: an editable area (not a textarea), so it wraps around the pictures'
+// floats like the saved page. React doesn't render its text (that would fight the browser's editing);
+// the text is put in when it changes from outside (a frame inserted, an entry opened).
+function EditableText({ text, onChange, lang, label, placeholder, sheetRef, apiRef }: EditableTextProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  const shown = useRef<string | null>(null)
+  // The last cursor position inside the text, so a frame goes where the learner was writing.
+  const lastRange = useRef<Range | null>(null)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (el && text !== shown.current) {
+      el.textContent = text
+      shown.current = text
+    }
+  }, [text])
+
+  useEffect(() => {
+    const onSelection = () => {
+      const sel = document.getSelection()
+      const el = ref.current
+      if (sel?.rangeCount && el?.contains(sel.anchorNode)) lastRange.current = sel.getRangeAt(0).cloneRange()
+    }
+    document.addEventListener('selectionchange', onSelection)
+    return () => document.removeEventListener('selectionchange', onSelection)
+  }, [])
+
+  useEffect(() => {
+    if (!apiRef) return
+    apiRef.current = {
+      insert(insertText, select) {
+        const el = ref.current
+        const sel = document.getSelection()
+        if (!el || !sel) return
+        el.focus()
+        let range = lastRange.current && el.contains(lastRange.current.startContainer) ? lastRange.current : null
+        if (!range) {
+          range = document.createRange()
+          range.selectNodeContents(el)
+          range.collapse(false)
+        }
+        sel.removeAllRanges()
+        sel.addRange(range)
+        // A space before the inserted text unless the cursor is at the start or after a space.
+        const before = document.createRange()
+        before.setStart(el, 0)
+        before.setEnd(range.startContainer, range.startOffset)
+        const gap = before.toString() && !/\s$/.test(before.toString()) ? ' ' : ''
+        // insertText keeps the browser's undo history and fires `input`, which saves the change.
+        document.execCommand('insertText', false, gap + insertText)
+        if (select) {
+          const modify = (sel as Selection & { modify?: (a: string, d: string, g: string) => void }).modify?.bind(sel)
+          if (modify) {
+            for (let i = 0; i < insertText.length - select.start; i++) modify('move', 'backward', 'character')
+            for (let i = 0; i < select.end - select.start; i++) modify('extend', 'forward', 'character')
+          }
+        }
+      },
+      textBottom() {
+        const el = ref.current
+        const sheet = sheetRef.current
+        if (!el || !sheet || !el.textContent) return 0
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        const rects = range.getClientRects()
+        const last = rects[rects.length - 1]
+        const box = sheet.getBoundingClientRect()
+        return last ? (last.bottom - box.top) / box.width : 0
+      },
+    }
+  }, [apiRef, sheetRef])
+
+  return (
+    <div
+      ref={ref}
+      className={`journal-text${text ? '' : ' empty'}`}
+      contentEditable={PLAIN_ONLY ? 'plaintext-only' : true}
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline="true"
+      aria-label={label}
+      data-placeholder={placeholder}
+      lang={lang}
+      onInput={(e) => {
+        const value = readText(e.currentTarget)
+        shown.current = value
+        onChange(value)
+      }}
+      onPaste={(e) => {
+        // Pictures are handled by the editor (they become stickers); text comes in as plain text.
+        if ([...e.clipboardData.files].some((f) => f.type.startsWith('image/'))) return
+        if (PLAIN_ONLY) return
+        e.preventDefault()
+        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+    />
   )
 }

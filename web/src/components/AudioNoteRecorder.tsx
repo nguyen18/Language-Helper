@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { objectUrl, type AudioNote } from '../lib/journal'
 
 // An optional spoken note for a journal entry, recorded in the browser (MediaRecorder). The recording
@@ -8,12 +8,75 @@ const recordingSupported = typeof window !== 'undefined' && 'MediaRecorder' in w
 
 const formatSeconds = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-export function AudioNotePlayer({ audio }: { audio: AudioNote }) {
-  const url = objectUrl(audio.blob)
+/**
+ * The note's player, drawn in the journal's style (the browser's own controls can't be restyled): a square
+ * play/pause button, a thin ink line to drag or tap along, and the time. The length comes from the audio
+ * when it says, else from the recording (browser recordings often don't know their own length). `bare`
+ * leaves out its "🎙 Audio note" title (a saved entry shows just the bar).
+ */
+export function AudioNotePlayer({ audio, bare = false }: { audio: AudioNote; bare?: boolean }) {
+  const bar = <AudioBar audio={audio} />
+  if (bare) return bar
   return (
     <div className="audio-note">
-      <span className="muted">🎙 Audio note · {formatSeconds(audio.seconds)}</span>
-      <audio controls src={url} preload="metadata" />
+      <span className="muted">🎙 Audio note</span>
+      {bar}
+    </div>
+  )
+}
+
+function AudioBar({ audio }: { audio: AudioNote }) {
+  const url = objectUrl(audio.blob)
+  const ref = useRef<HTMLAudioElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [time, setTime] = useState(0)
+  const [duration, setDuration] = useState(audio.seconds)
+  const progress = duration ? Math.min(100, (time / duration) * 100) : 0
+
+  return (
+    <div className="audio-bar">
+      <audio
+        ref={ref}
+        src={url}
+        preload="metadata"
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration
+          if (Number.isFinite(d) && d > 0) setDuration(d)
+        }}
+        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false)
+          setTime(0)
+        }}
+      />
+      <button
+        type="button"
+        className="icon-button small audio-play"
+        aria-label={playing ? 'Pause the audio note' : 'Play the audio note'}
+        onClick={() => (playing ? ref.current?.pause() : void ref.current?.play())}
+      >
+        {playing ? '❚❚' : '▶'}
+      </button>
+      <input
+        type="range"
+        className="audio-seek"
+        min={0}
+        max={duration || 0}
+        step={0.01}
+        value={Math.min(time, duration || 0)}
+        aria-label="Position in the audio note"
+        style={{ '--progress': `${progress}%` } as CSSProperties}
+        onChange={(e) => {
+          const t = Number(e.target.value)
+          if (ref.current) ref.current.currentTime = t
+          setTime(t)
+        }}
+      />
+      <span className="audio-time">
+        {formatSeconds(time)} / {formatSeconds(duration)}
+      </span>
     </div>
   )
 }

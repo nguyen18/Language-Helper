@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { AudioNotePlayer } from '../components/AudioNoteRecorder'
 import { JournalEditor } from '../components/JournalEditor'
 import { JournalSheet } from '../components/JournalSheet'
@@ -9,28 +9,35 @@ import {
   changeKey,
   keepCapital,
   keptWordKey,
+  checkCaption,
   checkSpelling,
   kindOf,
   reviewNotes,
-  sentencePieces,
+  alignSentence,
+  joinedWordsIn,
+  sameLetters,
   shownWord,
   wordTokens,
   withAcceptedHints,
   type SpellingCheck,
-  type KeyedHint,
-  type Piece,
   type WordOption,
   type ReviewChange,
-  type ReviewSentence,
 } from '../lib/spelling'
 import type { CheatsheetEntry, Meaning } from '../lib/cheatsheet'
 import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/languages'
 import { entryFor } from '../lib/translateWords'
+import { entryDate } from '../lib/journalDates'
+import { EntryHead } from '../components/EntryHead'
+import { loadJournalFont } from '../lib/journalFont'
 import { loadWordOptions, type WordAlternatives } from '../lib/wordOptions'
 
 // The journal: entries written in the target language (English where the learner doesn't know a word yet),
 // latest on top. Each shows the user's own words untouched (blue), and underneath, Mai's corrected copy
 // (red), sentence by sentence, from which-dialect's journal review.
+
+// The page is styled like a zine journal (Daplit, owner's reference 2026-10-01): graph paper, thin ink
+// lines, Space Grotesk headings framed by slashes ("/ Journal /").
+loadJournalFont()
 
 type Editing = { entry?: JournalEntry } | null
 // Per entry: a check in progress, or the last one that failed.
@@ -66,97 +73,123 @@ export function Journal() {
     }
   }
 
+  // Captions are checked one by one (a few words each), and saved onto the entry as it is by then, for
+  // captions that didn't change while Mai was checking.
+  const runCaptionChecks = async (entry: JournalEntry) => {
+    if (!backendConfigured) return
+    const stale = entry.items.filter((i) => i.caption?.trim() && i.captionCheck?.input !== i.caption)
+    if (!stale.length) return
+    const lang = targetById(entry.targetId)
+    const results = await Promise.all(
+      stale.map(async (i) => ({ id: i.id, caption: i.caption!, check: await checkCaption(lang, i.caption!, extraChecks).catch(() => null) })),
+    )
+    const latest = entriesRef.current?.find((e) => e.id === entry.id)
+    if (!latest) return
+    const items = latest.items.map((i) => {
+      const r = results.find((x) => x.id === i.id && x.caption === i.caption && x.check)
+      return r ? { ...i, captionCheck: r.check! } : i
+    })
+    await save({ ...latest, items })
+  }
+
   const onSave = async (entry: JournalEntry) => {
     await save(entry)
     setEditing(null)
     window.scrollTo(0, 0)
-    // Check again only when the words changed since the last check.
-    if (entry.text && entry.check?.input !== entry.text) void runCheck(entry)
+    // Check again only what changed since the last check: the words, then the captions (one after the
+    // other, so neither save overwrites the other's).
+    void (async () => {
+      if (entry.text && entry.check?.input !== entry.text) await runCheck(entry)
+      await runCaptionChecks(entry)
+    })()
   }
 
   return (
-    <main className="app">
-      <header className="header">
-        <h1>Journal</h1>
-        <p className="muted">
-          Write a little about your day in <strong>{target.label}</strong>. Stuck on a word? Write it in English and
-          Mai fills it in. Your words stay as you wrote them, in blue; Mai's corrected copy goes underneath, in
-          red.
-        </p>
-      </header>
+    <main className="journal-page">
+      <div className="journal-inner">
+        <header className="journal-top">
+          <div className="journal-title-row">
+            <h1 className="slashed">Journal</h1>
+            {!editing && (
+              <button type="button" className="icon-button" aria-label="New entry" title="New entry" onClick={() => setEditing({})}>
+                ＋
+              </button>
+            )}
+          </div>
+          <p className="journal-intro">
+            Write about your favorite topics, feelings or your day in <strong>{target.label}</strong>. 
+            <p></p> Stuck on a word? Write it in English and Mai fills
+            it in: your words stay blue, Mai's notes are red.
+          </p>
+          <HighlightKey extraChecks={extraChecks} />
+        </header>
 
-      {error && <p className="error">{error}</p>}
+        {error && <p className="error">{error}</p>}
 
-      {editing ? (
-        <JournalEditor
-          key={editing.entry?.id ?? 'new'}
-          target={editing.entry ? targetById(editing.entry.targetId) : target}
-          entry={editing.entry}
-          onSave={onSave}
-          onCancel={() => setEditing(null)}
-        />
-      ) : (
-        <div className="footer-actions journal-new">
-          <button type="button" className="primary" onClick={() => setEditing({})}>
-            ✎ New entry
-          </button>
-        </div>
-      )}
+        {editing ? (
+          <JournalEditor
+            key={editing.entry?.id ?? 'new'}
+            target={editing.entry ? targetById(editing.entry.targetId) : target}
+            entry={editing.entry}
+            onSave={onSave}
+            onCancel={() => setEditing(null)}
+          />
+        ) : (
+          entries?.length === 0 && (
+            <div className="journal-new">
+              <button type="button" className="primary" onClick={() => setEditing({})}>
+                ✎ Write your first entry
+              </button>
+            </div>
+          )
+        )}
 
-      {entries === null ? (
-        <p className="muted">Loading your journal…</p>
-      ) : entries.length === 0 ? (
-        !editing && (
-          <section className="card">
-            <p className="muted">
-              No entries yet. Write one, or record an audio note and type out what you said: typed words are what
-              Mai can check.
+        {entries === null ? (
+          <p className="muted">Loading your journal…</p>
+        ) : entries.length === 0 ? (
+          !editing && (
+            <p className="journal-empty">
+              No entries yet. Write one, or record an audio note and type out what you said: typed words are what Mai
+              can check.
             </p>
-          </section>
-        )
-      ) : (
-        <ol className="journal-list">
-          {entries
-            .filter((e) => e.id !== editing?.entry?.id)
-            .map((entry) => (
-              <EntryCard
-                key={entry.id}
-                entry={entry}
-                checkState={checks[entry.id]}
-                onCheck={() => runCheck(entry)}
-                extraChecks={extraChecks}
-                onAcceptHint={(key) =>
-                  entry.check &&
-                  save({ ...entry, check: { ...entry.check, acceptedHints: [...(entry.check.acceptedHints ?? []), key] } })
-                }
-                onPickWord={(key, word) =>
-                  entry.check && save({ ...entry, check: { ...entry.check, wordPicks: { ...entry.check.wordPicks, [key]: word } } })
-                }
-                onEdit={() => {
-                  setEditing({ entry })
-                  window.scrollTo(0, 0)
-                }}
-                onDelete={() => remove(entry.id)}
-              />
-            ))}
-        </ol>
-      )}
+          )
+        ) : (
+          <ol className="journal-list">
+            {entries
+              .filter((e) => e.id !== editing?.entry?.id)
+              .map((entry) => (
+                <EntryCard
+                  key={entry.id}
+                  entry={entry}
+                  currentTarget={target.id}
+                  checkState={checks[entry.id]}
+                  onCheck={() => runCheck(entry)}
+                  extraChecks={extraChecks}
+                  onAcceptHint={(key) =>
+                    entry.check &&
+                    save({ ...entry, check: { ...entry.check, acceptedHints: [...(entry.check.acceptedHints ?? []), key] } })
+                  }
+                  onPickWord={(key, word) =>
+                    entry.check && save({ ...entry, check: { ...entry.check, wordPicks: { ...entry.check.wordPicks, [key]: word } } })
+                  }
+                  onEdit={() => {
+                    setEditing({ entry })
+                    window.scrollTo(0, 0)
+                  }}
+                  onDelete={() => remove(entry.id)}
+                />
+              ))}
+          </ol>
+        )}
+      </div>
     </main>
   )
 }
 
-const formatWhen = (when: string) =>
-  new Date(when).toLocaleString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-
 type CardProps = {
   entry: JournalEntry
+  /** The language being learned now: an entry in another one says which. */
+  currentTarget: string
   checkState?: 'checking' | 'failed'
   onCheck: () => void
   extraChecks: boolean
@@ -166,63 +199,69 @@ type CardProps = {
   onDelete: () => void
 }
 
-function EntryCard({ entry, checkState, onCheck, extraChecks, onAcceptHint, onPickWord, onEdit, onDelete }: CardProps) {
+function EntryCard({ entry, currentTarget, checkState, onCheck, extraChecks, onAcceptHint, onPickWord, onEdit, onDelete }: CardProps) {
   const [confirming, setConfirming] = useState(false)
   const lang = targetById(entry.targetId)
   // A check from before the entry was last edited (or in an older format) doesn't count.
   const check =
     entry.check?.input === entry.text && entry.check.review && 'extraChecks' in entry.check ? entry.check : undefined
 
+  const date = entryDate(entry.when, lang.code)
+
   return (
-    <li className="card journal-entry">
-      <div className="card-head">
-        <h2>
-          <time dateTime={entry.when}>{formatWhen(entry.when)}</time>
-        </h2>
-        <span className="language-tag">{lang.label}</span>
-      </div>
+    <li className="journal-entry">
+      <EntryHead when={entry.when} date={date} label={entry.targetId !== currentTarget ? lang.label : undefined} lang={lang.code} />
 
-      {(entry.text || entry.items.length > 0) && (
-        <JournalSheet text={entry.text} items={entry.items} lang={lang.code} />
-      )}
-      {entry.audio && <AudioNotePlayer audio={entry.audio} />}
+      {/* One sheet of paper: the learner's page, then Mai's notes written at the bottom of it. */}
+      <div className={check ? 'entry-paper annotated' : 'entry-paper'}>
+        {/* The audio note's bar, then edit and delete, along the bottom of the page under the text. */}
+        <div className={entry.audio ? 'entry-tools with-audio' : 'entry-tools'}>
+          {entry.audio && !confirming && <AudioNotePlayer audio={entry.audio} bare />}
+          {confirming ? (
+            <span className="journal-confirm">
+              Delete?{' '}
+              <button type="button" className="chip danger" onClick={onDelete}>
+                Delete
+              </button>{' '}
+              <button type="button" className="chip" onClick={() => setConfirming(false)}>
+                Keep
+              </button>
+            </span>
+          ) : (
+            <>
+              <button type="button" className="icon-button small" aria-label="Edit entry" title="Edit" onClick={onEdit}>
+                ✎
+              </button>
+              <button type="button" className="icon-button small" aria-label="Delete entry" title="Delete" onClick={() => setConfirming(true)}>
+                🗑
+              </button>
+            </>
+          )}
+        </div>
+        {(entry.text || entry.items.length > 0) && (
+          <JournalSheet
+            text={entry.text}
+            items={entry.items}
+            lang={lang.code}
+            richText={check && <AnnotatedText check={check} onPickWord={onPickWord} target={lang} />}
+          />
+        )}
 
-      {entry.text ? (
-        <Correction
-          check={check}
-          state={checkState}
-          onCheck={onCheck}
-          extraChecks={extraChecks}
-          onAcceptHint={onAcceptHint}
-          onPickWord={onPickWord}
-          target={lang}
-        />
-      ) : (
-        <p className="journal-nudge">
-          Type out what you said in your audio note so Mai can check it. <button type="button" className="inline-link" onClick={onEdit}>Add it now</button>
-        </p>
-      )}
-
-      <div className="journal-entry-actions">
-        <button type="button" className="chip" onClick={onEdit}>
-          Edit
-        </button>
-        {confirming ? (
-          <span className="journal-confirm">
-            Delete this entry?{' '}
-            <button type="button" className="chip danger" onClick={onDelete}>
-              Delete
-            </button>{' '}
-            <button type="button" className="chip" onClick={() => setConfirming(false)}>
-              Keep
-            </button>
-          </span>
+        {entry.text ? (
+          <Correction
+            check={check}
+            state={checkState}
+            onCheck={onCheck}
+            extraChecks={extraChecks}
+            onAcceptHint={onAcceptHint}
+          />
         ) : (
-          <button type="button" className="chip" onClick={() => setConfirming(true)}>
-            Delete
-          </button>
+          <p className="journal-nudge">
+            Type out what you said in your audio note so Mai can check it. <button type="button" className="inline-link" onClick={onEdit}>Add it now</button>
+          </p>
         )}
       </div>
+
     </li>
   )
 }
@@ -234,12 +273,9 @@ type CorrectionProps = {
   /** The current setting, to offer a new check when the entry was checked with the other one. */
   extraChecks: boolean
   onAcceptHint: (key: string) => void
-  onPickWord: (key: string, word: string) => void
-  target: TargetLanguage
 }
 
-function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWord, target }: CorrectionProps) {
-  const lang = target.code
+function Correction({ check, state, onCheck, extraChecks, onAcceptHint }: CorrectionProps) {
   if (!backendConfigured) {
     return <p className="muted journal-check-status">Corrections aren't set up on this site yet.</p>
   }
@@ -256,49 +292,27 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWo
   }
 
   const review = withAcceptedHints(check)
-  const { changes, hints, frames } = reviewNotes(review)
+  const { hints } = reviewNotes(review)
   const accepted = new Set(check.acceptedHints ?? [])
   const openHints = hints.filter((h) => !accepted.has(h.key) && h.suggestions[0] !== undefined)
-  const kinds = [...new Map(changes.map((c) => [kindOf(c.kind).color, kindOf(c.kind)])).values()]
-  // Hints by sentence, to show each under its sentence.
-  const hintsIn = (si: number) => openHints.filter((h) => h.key.startsWith(`${si}:`))
 
+  // The corrections are written on the page (AnnotatedText); here, only what needs the learner: tips to
+  // use, and a new check after the settings changed. (The "/ Mai's notes / N changes" line was removed,
+  // owner's feedback 2026-10-01.)
+  if (!openHints.length && check.extraChecks === extraChecks) return null
   return (
     <section className="journal-correction" aria-label="Mai's corrections">
-      <div className="journal-correction-head">
-        <p className="journal-correction-label">
-          {changes.length
-            ? `Corrected by Mai · ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`
-            : 'Checked by Mai'}
-        </p>
-        {kinds.length > 0 && (
-          <ul className="change-legend" aria-label="Kinds of changes">
-            {kinds.map((k) => (
-              <li key={k.color} data-kind={k.color}>
-                {k.label}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {changes.length === 0 && openHints.length === 0 ? (
-        <p className="muted">Nothing to correct. (Mai only points out what she's sure about.)</p>
-      ) : (
-        <ol className="journal-sentences">
-          {review.sentences.map((s, si) => (
-            <SentenceView
-              key={si}
-              index={si}
-              sentence={s}
-              hints={hintsIn(si)}
-              picks={check.wordPicks ?? {}}
-              onAcceptHint={onAcceptHint}
-              onPickWord={onPickWord}
-              target={target}
-            />
+      {openHints.length > 0 && (
+        <ul className="journal-notes">
+          {openHints.map((h) => (
+            <li key={h.key} className="journal-tip">
+              Tip: {h.message}{' '}
+              <button type="button" className="chip" onClick={() => onAcceptHint(h.key)}>
+                Use “{h.suggestions[0]}”
+              </button>
+            </li>
           ))}
-        </ol>
+        </ul>
       )}
 
       {check.extraChecks !== extraChecks && (
@@ -310,140 +324,84 @@ function Correction({ check, state, onCheck, extraChecks, onAcceptHint, onPickWo
         </p>
       )}
 
-      {frames.length > 0 && (
-        <details className="journal-frames">
-          <summary>💡 Frames for this entry ({frames.length})</summary>
-          <ul>
-            {frames.map((f) => (
-              <li key={f.id}>
-                <span lang={lang}>{f.text}</span> <span className="muted">· {f.en}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="muted">Reuse them in your next entry: open “Sentence frames” when you write.</p>
-        </details>
-      )}
     </section>
   )
 }
 
-type SentenceProps = {
-  index: number
-  sentence: ReviewSentence
-  hints: KeyedHint[]
-  picks: Record<string, string>
-  onAcceptHint: (key: string) => void
+type AnnotatedProps = {
+  check: SpellingCheck
   onPickWord: (key: string, word: string) => void
   target: TargetLanguage
 }
 
-// One corrected sentence, changed words highlighted by kind (tap one for why), and under it the changes
-// grouped by kind ("Toi → Tôi · muon → muốn (Accents and spelling)"), tips and words Mai couldn't correct.
-function SentenceView({ index, sentence, hints, picks, onAcceptHint, onPickWord, target }: SentenceProps) {
-  const lang = target.code
-  const keyOf = (c: ReviewChange) => changeKey(index, sentence.changes.indexOf(c))
-  // Each piece with where it starts in the corrected sentence, to key picks on words Mai left alone.
-  const pieces: (Piece & { start: number })[] = []
-  for (const p of sentencePieces(sentence)) {
-    const last = pieces[pieces.length - 1]
-    pieces.push({ ...p, start: last ? last.start + last.text.length : 0 })
-  }
-  // The learner's own picks on words Mai left alone, for the notes ("nay → này").
-  // The sentence's words of several syllables, shifted to be relative to a piece starting at `from`; only
-  // those that lie wholly inside it (a change that overlaps one takes precedence).
-  const shift = (from: number, to = sentence.corrected.length) =>
-    (sentence.words ?? []).filter((w) => w.start >= from && w.end <= to).map((w) => ({ start: w.start - from, end: w.end - from }))
-  const ownPicks = Object.entries(picks)
-    .filter(([key]) => key.startsWith(`${index}@`))
-    .map(([key, pick]) => {
-      const offset = Number(key.slice(key.indexOf('@') + 1))
-      const word = wordTokens(sentence.corrected.slice(offset), shift(offset))[0]?.text ?? ''
-      return { word, pick: keepCapital(word, pick) }
-    })
-    .filter((p) => p.word && p.word.toLowerCase() !== p.pick.toLowerCase())
-  const changed = sentence.changes.length > 0
-  const groups = new Map<string, ReviewChange[]>()
-  for (const c of sentence.changes) groups.set(kindOf(c.kind).label, [...(groups.get(kindOf(c.kind).label) ?? []), c])
-
-  return (
-    <li className={changed ? 'journal-sentence changed' : 'journal-sentence'}>
-      <p className="journal-corrected" lang={lang}>
-        <span className="sentence-mark" aria-hidden="true">
-          {changed ? '✓' : '·'}
+/**
+ * The learner's own text with Mai's corrections written above the words they replace, like a teacher's red
+ * pen (owner's request 2026-10-01): English words are crossed out in red with the target-language word
+ * over them; other fixes ("hom nay" → "hôm nay") are written over the original. Every word can be tapped:
+ * corrections for why and other words to pick, the rest for their meaning and alternatives.
+ */
+export function AnnotatedText({ check, onPickWord, target }: AnnotatedProps) {
+  const review = withAcceptedHints(check)
+  const picks = check.wordPicks ?? {}
+  const out: ReactNode[] = []
+  // Words are buttons, and browsers may break a line after one, even before a full stop: punctuation right
+  // after a word stays with it ("học." doesn't become "học" + "." on the next line).
+  const pushPunctuation = (text: string, key: string) => {
+    const glued = /^[^\s]+/.exec(text)?.[0]
+    const last = out[out.length - 1]
+    if (glued && last && typeof last === 'object') {
+      out[out.length - 1] = (
+        <span key={`${key}-glue`} className="nowrap">
+          {last}
+          {glued}
         </span>
-        {pieces.map((p, i) =>
-          p.change ? (
-            <ChangeMark
-              key={i}
-              change={p.change}
-              shown={shownWord(p.change, picks[keyOf(p.change)])}
-              onPick={(word) => onPickWord(keyOf(p.change!), word)}
-              target={target}
-            />
-          ) : (
-            // Words Mai left alone: hover for their meaning, other accents and other words.
-            wordTokens(p.text, shift(p.start, p.start + p.text.length)).map((t) => {
-              if (!t.word) return <span key={`${i}-${t.start}`}>{t.text}</span>
-              const key = keptWordKey(index, p.start + t.start)
-              return (
-                <WordMark
-                  key={`${i}-${t.start}`}
-                  word={t.text}
-                  pick={picks[key]}
-                  onPick={(word) => onPickWord(key, word)}
-                  target={target}
-                />
-              )
-            })
-          ),
-        )}
-      </p>
-      {(groups.size > 0 || hints.length > 0 || sentence.unchecked.length > 0 || ownPicks.length > 0) && (
-        <ul className="journal-notes">
-          {ownPicks.length > 0 && (
-            <li>
-              {ownPicks.map((p, i) => (
-                <span key={i}>
-                  {i > 0 && ' · '}
-                  <s lang={lang}>{p.word}</s> → <strong lang={lang}>{p.pick}</strong>
-                </span>
-              ))}{' '}
-              <span className="muted">(your {ownPicks.length === 1 ? 'pick' : 'picks'})</span>
-            </li>
-          )}
-          {[...groups].map(([label, list]) => (
-            <li key={label}>
-              {list.map((c, i) => (
-                <span key={i}>
-                  {i > 0 && ' · '}
-                  <s lang={lang}>{c.from}</s> →{' '}
-                  {c.to ? <strong lang={lang}>{shownWord(c, picks[keyOf(c)])}</strong> : <em>left out</em>}
-                </span>
-              ))}{' '}
-              <span className="muted">({label})</span>
-            </li>
-          ))}
-          {hints.map((h) => (
-            <li key={h.key} className="journal-tip">
-              Tip: {h.message}{' '}
-              <button type="button" className="chip" onClick={() => onAcceptHint(h.key)}>
-                Use “{h.suggestions[0]}”
-              </button>
-            </li>
-          ))}
-          {sentence.unchecked.map((u, i) => (
-            <li key={`u-${i}`} className="journal-tip">
-              Couldn't correct “{u}”: no {target.label} word found, so it's left as written.
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
-  )
+      )
+      if (text.length > glued.length) out.push(text.slice(glued.length))
+    } else {
+      out.push(text)
+    }
+  }
+  let at = 0
+  review.sentences.forEach((sentence, si) => {
+    if (sentence.start > at) out.push(review.text.slice(at, sentence.start))
+    const keyOf = (c: ReviewChange) => changeKey(si, sentence.changes.indexOf(c))
+    for (const seg of alignSentence(sentence)) {
+      if (seg.change) {
+        const change = seg.change
+        out.push(
+          <ChangeMark
+            key={`${si}-${seg.start}`}
+            change={change}
+            original={seg.text}
+            shown={shownWord(change, picks[keyOf(change)])}
+            onPick={(word) => onPickWord(keyOf(change), word)}
+            target={target}
+          />,
+        )
+        continue
+      }
+      for (const t of wordTokens(seg.text, joinedWordsIn(seg.text, sentence))) {
+        const start = seg.start + t.start
+        if (!t.word) {
+          pushPunctuation(t.text, `${si}-${start}`)
+          continue
+        }
+        const key = keptWordKey(si, start)
+        out.push(
+          <WordMark key={`${si}-${start}`} word={t.text} pick={picks[key]} onPick={(word) => onPickWord(key, word)} target={target} />,
+        )
+      }
+    }
+    at = sentence.end
+  })
+  if (at < review.text.length) out.push(review.text.slice(at))
+  return <>{out}</>
 }
 
 type ChangeMarkProps = {
   change: ReviewChange
+  /** The learner's words the change replaces: the correction is written above them. */
+  original?: string
   /** The word shown: the learner's pick, or the review's. */
   shown: string
   onPick: (word: string) => void
@@ -454,21 +412,36 @@ type ChangeMarkProps = {
 // and the other words it could be, to star the one that fits. English words Mai translated show every
 // meaning of the English word with its translations (the meaning holding Mai's word first, since that's
 // the one the sentence uses); other changes show the checker's alternatives ("khong": không, khổng, khống).
-function ChangeMark({ change, shown, onPick, target }: ChangeMarkProps) {
+function ChangeMark({ change, original, shown, onPick, target }: ChangeMarkProps) {
   const kind = kindOf(change.kind)
   const lang = target.code
   const hasOptions = (change.options?.length ?? 0) > 1
   // Every correction to a word can be looked at and changed: English words through their Cheatsheet entry,
   // the others through the spellchecker's options and the word's own alternatives. Frame clauses can't.
   const choosable = change.kind === 'foreign-word' || (change.kind !== 'frame' && Boolean(change.to))
+  const english = change.kind === 'foreign-word' || change.kind === 'frame'
+  const meantTarget = english && original !== undefined && Boolean(shown) && sameLetters(original, shown)
   return (
     <Popover
       title={`${change.from} → ${shown}`}
       trigger={
-        <>
-          {shown}
-          {choosable && <span className="choice-dot" aria-hidden="true" />}
-        </>
+        original !== undefined ? (
+          // English (a word, or a clause a frame filled in) is crossed out; other fixes keep the original.
+          // A pick with the same letters ("rat" → "rất": the learner meant a Vietnamese word) is an accent fix,
+          // tinted and drawn like one; other English stays crossed out.
+          <ruby className={meantTarget ? 'fix' : english ? 'fix crossed' : 'fix'}>
+            <span className="fix-original">{original}</span>
+            {/* A word left out ("the") is only crossed out: nothing goes above it. */}
+            <rt className="fix-new" data-kind={shown ? (meantTarget ? kindOf('spelling').color : kind.color) : undefined}>
+              {shown}
+            </rt>
+          </ruby>
+        ) : (
+          <>
+            {shown}
+            {choosable && <span className="choice-dot" aria-hidden="true" />}
+          </>
+        )
       }
       triggerClassName="change-mark"
       triggerLabel={`${shown}, changed from “${change.from}”: ${kind.label}${choosable ? '. Other words to choose from' : ''}`}
@@ -603,9 +576,19 @@ function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkPr
         lang={target.code}
       />
     ) : null
+  // The learner may have meant a word of the language typed without accents ("rat": rất, very), which the
+  // review took for English: offer those too.
+  const meant = <MeantInTarget word={change.from} shown={shown} onPick={onPick} target={target} />
   if (entry === undefined) return <p className="muted">Looking up “{change.from}”…</p>
   const meanings = entry?.meanings.filter((m) => m.options.length > 0) ?? []
-  if (!meanings.length) return fallback
+  if (!meanings.length) {
+    return (
+      <>
+        {fallback}
+        {meant}
+      </>
+    )
+  }
 
   // The meaning the sentence uses: the one holding the shown word, else the one holding Mai's word.
   const holds = (m: Meaning, w: string) => m.options.some((o) => o.text.toLowerCase() === w.toLowerCase())
@@ -647,6 +630,29 @@ function TranslationChoices({ change, shown, onPick, target }: Omit<ChangeMarkPr
           </ul>
         </details>
       )}
+      {meant}
+    </>
+  )
+}
+
+// "Did you mean a Vietnamese word?": the words of the language spelled with the same letters as the one Mai
+// took for English, with their meanings ("rat": rất "very", rát "burning"…). Nothing when there are none.
+function MeantInTarget({ word, shown, onPick, target }: { word: string; shown: string; onPick: (w: string) => void; target: TargetLanguage }) {
+  const [accents, setAccents] = useState<WordOption[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    loadWordOptions(target, word)
+      .then((o) => !cancelled && setAccents(o?.accents ?? []))
+      .catch(() => !cancelled && setAccents([]))
+    return () => {
+      cancelled = true
+    }
+  }, [target, word])
+  if (!accents?.length) return null
+  return (
+    <>
+      <p className="tip-note-label word-options-label">Or did you mean a {target.language} word?</p>
+      <WordOptions words={accents} shown={shown} reviewWord="" onPick={onPick} lang={target.code} />
     </>
   )
 }
@@ -662,7 +668,16 @@ function WordMark({ word, pick, onPick, target }: WordMarkProps) {
   return (
     <Popover
       title={shown}
-      trigger={shown}
+      trigger={
+        changed ? (
+          <ruby className="fix">
+            <span className="fix-original">{word}</span>
+            <rt className="fix-new picked">{shown}</rt>
+          </ruby>
+        ) : (
+          shown
+        )
+      }
       triggerClassName={changed ? 'word-mark picked' : 'word-mark'}
       triggerLabel={`${shown}: see what it means and other words`}
       wrapClassName="word-wrap"
@@ -744,5 +759,21 @@ function WordAlternativesBox({ word, shown, onPick, target, tag = 'your word', s
       )}
       {!alternatives && !skipAccents && <p className="muted">No other words to choose from.</p>}
     </>
+  )
+}
+
+
+// The page's highlighter key, under its description: what each tint in Mai's notes means. The regional
+// word and pronoun tints only appear when those checks are on (Settings).
+function HighlightKey({ extraChecks }: { extraChecks: boolean }) {
+  const kinds = ['spelling', 'foreign-word', 'frame', ...(extraChecks ? ['dialect', 'pronoun-consistency'] : [])]
+  return (
+    <ul className="change-legend page-legend" aria-label="What Mai's highlights mean">
+      {kinds.map((k) => (
+        <li key={k} data-kind={kindOf(k).color}>
+          {kindOf(k).label}
+        </li>
+      ))}
+    </ul>
   )
 }
