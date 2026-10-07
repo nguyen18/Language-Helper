@@ -5,7 +5,7 @@ import { displayWord, tokenize } from './wordCounts'
 // They come from the Personal Word List Discoverer (the chat with Mai), from words typed or pasted on
 // the Cheatsheet, or from an uploaded .txt/.md/.docx file (readWordsFile). Saved in localStorage.
 
-const STORAGE_KEY = 'language-helper:my-words'
+const STORAGE_KEY = 'mai-tutor:my-words'
 export const MAX_MY_WORDS = 100
 
 function loadWords(): string[] {

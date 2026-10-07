@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CheatsheetList } from './cheatsheet'
 import { targetById } from './languages'
 
-const STORAGE_KEY = 'language-helper:custom-lists'
+const STORAGE_KEY = 'mai-tutor:custom-lists'
 
 export type CustomEntry = { word: string; translation: string }
 

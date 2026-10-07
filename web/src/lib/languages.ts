@@ -27,8 +27,8 @@ export const TARGET_LANGUAGES: TargetLanguage[] = [
 // Southern Vietnamese was the only language before Settings existed (2026-10-01).
 export const DEFAULT_TARGET = TARGET_LANGUAGES[0]
 
-const STORAGE_KEY = 'language-helper:target-language'
-const CHANGE_EVENT = 'language-helper:target-language-change'
+const STORAGE_KEY = 'mai-tutor:target-language'
+const CHANGE_EVENT = 'mai-tutor:target-language-change'
 // Used when localStorage is unavailable: the choice then lasts until the page reloads.
 let unsaved: string | null = null
 

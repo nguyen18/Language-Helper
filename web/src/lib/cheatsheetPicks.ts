@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
 // v2 (2026-09-27): picks are per meaning. Picks saved by the old format (one translation per word) are
-// left behind in `language-helper:cheatsheet-picks` and ignored.
-const STORAGE_KEY = 'language-helper:cheatsheet-picks-v2'
+// left behind in `mai-tutor:cheatsheet-picks` and ignored.
+const STORAGE_KEY = 'mai-tutor:cheatsheet-picks-v2'
 
 // Keys (see meaningKey/optionKey) -> the picked meaning id, or the picked translation's text.
 // Anything without a pick shows its first (default) meaning or translation.

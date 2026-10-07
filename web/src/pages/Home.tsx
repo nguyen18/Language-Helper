@@ -3,7 +3,7 @@ import { STUDY_PLAN } from '../lib/studyPlan'
 import { ROUTE_HREF } from '../lib/useRoute'
 import maiAvatar from '../assets/mai-placeholder.png'
 
-const STORAGE_KEY = 'language-helper:study-plan'
+const STORAGE_KEY = 'mai-tutor:study-plan'
 
 function loadDone(): string[] {
   try {

@@ -63,7 +63,7 @@ async function build(tr: Translator, target: TargetLanguage) {
   const rows = await dictionary.pronouns({ region: target.region })
   const pronounTable = {
     source: 'which-dialect',
-    // Language Helper is about casual chat, so a friend your age leads; the package's neutral default
+    // Mai is about casual chat, so a friend your age leads; the package's neutral default
     // ("general": tôi / bạn) is the default for who you're talking about ("he"/"she"/"they").
     defaultListener: rows.some((r) => r.id === 'friend') ? 'friend' : (rows.find((r) => r.default)?.id ?? rows[0]?.id),
     defaultAbout: rows.find((r) => r.default)?.id ?? rows[0]?.id,
