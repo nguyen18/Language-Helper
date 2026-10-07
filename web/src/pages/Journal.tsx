@@ -28,7 +28,6 @@ import { targetById, useTargetLanguage, type TargetLanguage } from '../lib/langu
 import { entryFor } from '../lib/translateWords'
 import { entryDate } from '../lib/journalDates'
 import { EntryHead } from '../components/EntryHead'
-import { loadJournalFont } from '../lib/journalFont'
 import { loadWordOptions, type WordAlternatives } from '../lib/wordOptions'
 
 // The journal: entries written in the target language (English where the learner doesn't know a word yet),
@@ -36,8 +35,7 @@ import { loadWordOptions, type WordAlternatives } from '../lib/wordOptions'
 // (red), sentence by sentence, from which-dialect's journal review.
 
 // The page is styled like a zine journal (Daplit, owner's reference 2026-10-01): graph paper, thin ink
-// lines, Space Grotesk headings framed by slashes ("/ Journal /").
-loadJournalFont()
+// lines, headings framed by slashes ("/ Journal /").
 
 type Editing = { entry?: JournalEntry } | null
 // Per entry: a check in progress, or the last one that failed.

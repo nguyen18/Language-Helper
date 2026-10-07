@@ -33,6 +33,10 @@ export function Home() {
 
   return (
     <main className="app">
+      <p className="wordmark">
+        <span className="wordmark-name">MAI</span>
+        <span className="wordmark-tagline">your language tutor</span>
+      </p>
       <header className="header mai-greeting">
         <img className="mai-avatar large" src={maiAvatar} alt="" />
         <div className="bubble mai">
